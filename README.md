@@ -14,13 +14,13 @@ sudo bash quick_install.sh
 将以下命令中的 `YOUR_USERNAME` 和 `YOUR_REPO` 替换为你的 GitHub 用户名和仓库名：
 
 \`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/hnbwww/proxy-manager/main/install-from-github.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh | bash
 \`\`\`
 
 或者直接运行：
 
 \`\`\`bash
-bash <(curl -fsSL https://raw.githubusercontent.com/hnbwww/proxy-manager/main/install-from-github.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh)
 \`\`\`
 
 ## 使用说明
