@@ -1,35 +1,47 @@
-# Proxy Manager 一键安装脚本
+# Proxy Manager 一键安装
 
-## 原始版本安装
+## 🚀 一键安装
 
-\`\`\`bash
-curl -L https://ok.bi5u.com/xxx/proxy-manager-full.zip -o proxy-manager.zip && \
-unzip proxy-manager.zip -d proxy-manager && \
-cd proxy-manager && \
-sudo bash quick_install.sh
-\`\`\`
+**复制以下命令直接运行即可：**
 
-## GitHub 版本一键安装
-
-将以下命令中的 `YOUR_USERNAME` 和 `YOUR_REPO` 替换为你的 GitHub 用户名和仓库名：
-
-\`\`\`bash
-curl -fsSL https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh | bash
-\`\`\`
-
-或者直接运行：
-
-\`\`\`bash
+```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh)
-\`\`\`
+```
 
-## 使用说明
+## 📖 其他安装方式
 
-1. 将此项目上传到你的 GitHub 仓库
-2. 替换 `install-from-github.sh` 中的 `GITHUB_USERNAME` 和 `REPO_NAME`
-3. 使用上面的命令进行一键安装
+**方式二：**
+```bash
+curl -fsSL https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh | bash
+```
 
-## 文件说明
+**方式三：手动下载执行**
+```bash
+# 下载安装脚本
+wget https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh
 
-- `proxy-manager-install.sh` - 原始安装脚本
-- `install-from-github.sh` - GitHub 版本一键安装脚本
+# 或使用 curl
+curl -O https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh
+
+# 执行安装
+bash install-from-github.sh
+```
+
+## ⚙️ 系统要求
+
+- Linux/macOS 系统
+- 支持 sudo 权限
+- 网络连接正常
+
+## 📝 安装说明
+
+本脚本会自动：
+1. 从原始源下载 Proxy Manager 完整包
+2. 解压到当前目录
+3. 自动执行安装脚本
+
+安装过程需要 sudo 权限，请确保你有管理员权限。
+
+## 🔗 项目地址
+
+- GitHub: https://github.com/HYweb3/proxy-manager
