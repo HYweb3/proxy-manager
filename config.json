@@ -1,0 +1,103 @@
+{
+  "log": {
+    "access": "/var/log/xray/access.log",
+    "error": "/var/log/xray/error.log",
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "port": 500,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "596ffc83-b386-4ef5-b65c-9dac0a4ad5cd",
+            "flow": "",
+            "email": "user@proxy-manager"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/etc/proxy-manager/server.crt",
+              "keyFile": "/etc/proxy-manager/server.key"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "port": 501,
+      "protocol": "trojan",
+      "settings": {
+        "clients": [
+          {
+            "password": "ljM0BrzVcB9odpdD",
+            "email": "user@proxy-manager"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/etc/proxy-manager/server.crt",
+              "keyFile": "/etc/proxy-manager/server.key"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "port": 502,
+      "protocol": "vmess",
+      "settings": {
+        "clients": [
+          {
+            "id": "596ffc83-b386-4ef5-b65c-9dac0a4ad5cd",
+            "email": "user@proxy-manager"
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "/etc/proxy-manager/server.crt",
+              "keyFile": "/etc/proxy-manager/server.key"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "port": 503,
+      "protocol": "shadowsocks",
+      "settings": {
+        "clients": [
+          {
+            "email": "user@proxy-manager",
+            "method": "aes-256-gcm",
+            "password": "ljM0BrzVcB9odpdD"
+          }
+        ],
+        "network": "tcp,udp"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {}
+    }
+  ]
+}
