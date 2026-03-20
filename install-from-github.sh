@@ -1,17 +1,71 @@
 #!/bin/bash
 
 # Proxy Manager GitHub 版本一键安装脚本
-# 请将下面的 GITHUB_USERNAME 和 REPO_NAME 替换为你的实际值
+# 直接从 GitHub 下载并安装
+
+set -e
 
 GITHUB_USERNAME="HYweb3"
 REPO_NAME="proxy-manager"
-SCRIPT_FILE="proxy-manager-install.sh"
+ZIP_FILE="proxy-manager-full.zip"
+SRC_DIR="proxy-manager-src"
 
-echo "正在从 GitHub 下载 Proxy Manager 安装脚本..."
-curl -LO "https://raw.githubusercontent.com/${GITHUB_USERNAME}/${REPO_NAME}/main/${SCRIPT_FILE}"
+echo "========================================="
+echo "  Proxy Manager 一键安装"
+echo "========================================="
+echo ""
 
-echo "正在执行安装..."
-chmod +x ${SCRIPT_FILE}
-bash ${SCRIPT_FILE}
+# 检查是否已安装
+if [ -d "/opt/proxy-manager" ] || [ -f "/etc/systemd/system/proxy-manager.service" ]; then
+    echo "⚠️  检测到已安装 Proxy Manager"
+    read -p "是否重新安装？(y/N): " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "安装已取消"
+        exit 0
+    fi
+    echo "正在卸载旧版本..."
+    [ -f "$SRC_DIR/uninstall.sh" ] && bash "$SRC_DIR/uninstall.sh" 2>/dev/null || true
+fi
 
-echo "安装完成！"
+# 下载 zip 文件
+echo "📥 正在从 GitHub 下载 Proxy Manager..."
+DOWNLOAD_URL="https://github.com/${GITHUB_USERNAME}/${REPO_NAME}/raw/main/${ZIP_FILE}"
+if ! curl -fL "$DOWNLOAD_URL" -o "$ZIP_FILE"; then
+    echo "❌ 下载失败，请检查网络连接"
+    exit 1
+fi
+
+# 解压
+echo "📦 正在解压..."
+rm -rf "$SRC_DIR"
+unzip -q "$ZIP_FILE" -d "$SRC_DIR"
+
+# 进入目录并执行安装
+echo "🔧 正在安装..."
+cd "$SRC_DIR"
+
+if [ -f "quick_install.sh" ]; then
+    sudo bash quick_install.sh
+elif [ -f "install.sh" ]; then
+    sudo bash install.sh
+elif [ -f "one_click_install.sh" ]; then
+    sudo bash one_click_install.sh
+else
+    echo "❌ 未找到安装脚本"
+    exit 1
+fi
+
+# 清理
+cd ..
+rm -f "$ZIP_FILE"
+rm -rf "$SRC_DIR"
+
+echo ""
+echo "========================================="
+echo "✅ 安装完成！"
+echo "========================================="
+echo ""
+echo "访问地址: http://$(hostname -I | awk '{print $1}'):8080"
+echo "或访问: http://localhost:8080"
+echo ""
