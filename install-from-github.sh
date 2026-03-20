@@ -3,7 +3,7 @@
 # Proxy Manager GitHub 版本一键安装脚本
 # 请将下面的 GITHUB_USERNAME 和 REPO_NAME 替换为你的实际值
 
-GITHUB_USERNAME="hnbwww"
+GITHUB_USERNAME="HYweb3"
 REPO_NAME="proxy-manager"
 SCRIPT_FILE="proxy-manager-install.sh"
 
