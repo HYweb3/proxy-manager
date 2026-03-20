@@ -738,32 +738,154 @@ echo ""
 
 # 保存安装信息到文件
 cat > ${CONFIG_DIR}/install_info.txt << INFOEOF
-===========================================
-Proxy Manager 安装信息
-===========================================
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║              Proxy Manager 安装信息 - 请妥善保存               ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+========================================
+【基本信息】
+========================================
 安装日期: $(date)
 服务器IP: ${SERVER_IP}
+主机名: $(hostname)
 
-管理员密码: ${ADMIN_PASS}
+========================================
+【🔐 管理员密码】
+========================================
+${ADMIN_PASS}
 
-默认用户:
-  用户名: ${USER_NAME}
-  UUID: ${USER_UUID}
-  密码: ${USER_PASS}
+⚠️  重要：请妥善保管管理员密码！用于登录Web管理面板
 
-端口配置:
-  VLESS:  ${PROXY_PORT}
-  Trojan: ${TROJAN_PORT}
-  VMess:  ${VMESS_PORT}
-  SS:     ${SS_PORT}
-  Web:    ${WEB_PORT}
+========================================
+【👤 默认用户信息】
+========================================
+用户名: ${USER_NAME}
+UUID: ${USER_UUID}
+密码: ${USER_PASS}
+流量限制: 无限
 
-代理连接:
-  VLESS:  ${VLESS_URL}
-  Trojan: ${TROJAN_URL}
+========================================
+【🔌 端口配置】
+========================================
+VLESS:  ${PROXY_PORT}  (TLS加密)
+Trojan: ${TROJAN_PORT}  (TLS加密)
+VMess:  ${VMESS_PORT}  (TLS加密)
+SS:     ${SS_PORT}  (无加密)
+Web:    ${WEB_PORT}  (管理界面)
 
-管理面板: http://${SERVER_IP}:${WEB_PORT}
-===========================================
+========================================
+【📱 快速连接链接】
+========================================
+
+1️⃣ VLESS (推荐):
+${VLESS_URL}
+
+2️⃣ Trojan:
+${TROJAN_URL}
+
+3️⃣ VMess:
+${VMESS_URL}
+
+4️⃣ Shadowsocks:
+${SS_URL}
+
+========================================
+【🌐 访问地址】
+========================================
+Web管理面板: http://${SERVER_IP}:${WEB_PORT}
+
+========================================
+【🖼️ 二维码】
+========================================
+如需查看二维码，请在终端运行以下命令：
+
+VLESS 二维码:
+  qrencode -t ANSIUTF8 '${VLESS_URL}'
+
+Trojan 二维码:
+  qrencode -t ANSIUTF8 '${TROJAN_URL}'
+
+Shadowsocks 二维码:
+  qrencode -t ANSIUTF8 '${SS_URL}'
+
+或查看安装时的终端输出
+
+========================================
+【⚡ 服务管理】
+========================================
+启动服务:
+  systemctl start xray proxy-web
+
+停止服务:
+  systemctl stop xray proxy-web
+
+重启服务:
+  systemctl restart xray proxy-web
+
+查看状态:
+  systemctl status xray proxy-web
+
+开机自启:
+  systemctl enable xray proxy-web
+
+========================================
+【📊 用户管理】
+========================================
+查看用户列表:
+  python3 ${CONFIG_DIR}/proxy_manager.py list
+
+添加新用户:
+  python3 ${CONFIG_DIR}/proxy_manager.py add <用户名> <UUID> <密码>
+
+删除用户:
+  python3 ${CONFIG_DIR}/proxy_manager.py delete <用户名>
+
+========================================
+【📝 日志查看】
+========================================
+XRay访问日志:
+  tail -f /var/log/xray/access.log
+
+XRay系统日志:
+  journalctl -u xray -f
+
+Web服务日志:
+  journalctl -u proxy-web -f
+
+========================================
+【🔧 配置文件位置】
+========================================
+配置目录: ${CONFIG_DIR}
+  - config.json      XRay配置
+  - users.json       用户数据库
+  - stats.json       流量统计
+  - server.crt       TLS证书
+  - server.key       TLS私钥
+
+Web目录: ${WEB_DIR}
+  - proxy_web.py     Web服务
+
+========================================
+【🗑️ 卸载】
+========================================
+如需卸载，请运行:
+  bash ${SCRIPT_DIR}/uninstall.sh
+
+========================================
+【📱 客户端支持】
+========================================
+支持的客户端:
+  - Shadowrocket (iOS/macOS)
+  - V2RayN/V2RayNG (Windows/Android)
+  - Quantumult X (iOS)
+  - Clash (全平台)
+  - 其他支持VLESS/VMESS/Trojan/SS的客户端
+
+========================================
+安装完成！请妥善保存此文件！
+========================================
 INFOEOF
 
 echo -e "${GREEN}✓${PLAIN} 安装信息已保存到: ${YELLOW}${CONFIG_DIR}/install_info.txt${PLAIN}"
