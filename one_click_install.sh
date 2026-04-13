@@ -433,22 +433,61 @@ VLESS_URL="vless://${USER_UUID}@${SERVER_IP}:${VLESS_PORT}?encryption=none&secur
 TROJAN_URL="trojan://${USER_PASS}@${SERVER_IP}:${TROJAN_PORT}?security=tls&type=tcp#ProxyManager_${USER_NAME}"
 
 # VMess URL (需要base64编码)
-VMESS_CONFIG "{\"v\":\"2\",\"ps\":\"ProxyManager_${USER_NAME}\",\"add\":\"${SERVER_IP}\",\"port\":\"${VMESS_PORT}\",\"id\":\"${USER_UUID}\",\"net\":\"tcp\",\"type\":\"none\",\"tls\":\"tls\"}"
-VMESS_URL="vmess://$(echo -n "${VMESS_CONFIG}" | base64 -w 0)"
+VMESS_JSON=$(cat <<VMESSEOF
+{"v":"2","ps":"ProxyManager_${USER_NAME}","add":"${SERVER_IP}","port":"${VMESS_PORT}","id":"${USER_UUID}","net":"tcp","type":"none","tls":"tls"}
+VMESSEOF
+)
+VMESS_URL="vmess://$(echo -n "${VMESS_JSON}" | base64 -w 0)"
 
 SS_URL="ss://aes-256-gcm:${USER_PASS}@${SERVER_IP}:${SS_PORT}#ProxyManager_${USER_NAME}"
 
-echo -e "${CYAN}快速连接 (VLESS):${PLAIN}"
+# 显示所有协议链接
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
+echo -e "${CYAN}📱 所有协议连接链接${PLAIN}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
+echo ""
+
+echo -e "${GREEN}1️⃣  VLESS (端口 ${VLESS_PORT}) - 推荐${PLAIN}"
 echo -e "${VLESS_URL}"
 echo ""
 
+echo -e "${GREEN}2️⃣  Trojan (端口 ${TROJAN_PORT})${PLAIN}"
+echo -e "${TROJAN_URL}"
+echo ""
+
+echo -e "${GREEN}3️⃣  VMess (端口 ${VMESS_PORT})${PLAIN}"
+echo -e "${VMESS_URL}"
+echo ""
+
+echo -e "${GREEN}4️⃣  Shadowsocks (端口 ${SS_PORT})${PLAIN}"
+echo -e "${SS_URL}"
+echo ""
+
+# 生成所有二维码
 if command -v qrencode &>/dev/null; then
-    echo -e "${CYAN}VLESS 二维码:${PLAIN}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
+    echo -e "${CYAN}🖼️  扫描二维码快速导入${PLAIN}"
+    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
+    echo ""
+
+    echo -e "${GREEN}VLESS 二维码:${PLAIN}"
     qrencode -t ANSIUTF8 "${VLESS_URL}"
+    echo ""
+
+    echo -e "${GREEN}Trojan 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${TROJAN_URL}"
+    echo ""
+
+    echo -e "${GREEN}VMess 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${VMESS_URL}"
+    echo ""
+
+    echo -e "${GREEN}Shadowsocks 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${SS_URL}"
     echo ""
 fi
 
-echo -e "${CYAN}其他协议链接已保存到 install_info.txt${PLAIN}"
+echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
 echo ""
 
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${PLAIN}"
