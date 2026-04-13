@@ -685,6 +685,78 @@ SS_METHOD="aes-256-gcm"
 SS_INFO="${SS_METHOD}:${USER_PASS}"
 SS_URL="ss://$(echo -n "${SS_INFO}" | base64 -w 0)@${SERVER_IP}:${SS_PORT}#ProxyManager_${USER_NAME}"
 
+# 步骤4.5: 保存安装信息到文件 (在配置生成之前保存，确保不会丢失)
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
+echo -e "${BOLD}${CYAN}[4.5/8] 保存安装信息${PLAIN}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
+
+cat > ${CONFIG_DIR}/install_info.txt << INFOEOF
+╔═══════════════════════════════════════════════════════════════╗
+║              Proxy Manager 安装信息 - 请妥善保存               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+安装日期: $(date)
+服务器IP: ${SERVER_IP}
+
+【🔐 管理员密码】
+${ADMIN_PASS}
+
+【👤 默认用户信息】
+用户名: ${USER_NAME}
+UUID: ${USER_UUID}
+密码: ${USER_PASS}
+
+【🔌 端口配置】
+VLESS:  ${PROXY_PORT}  (TLS加密)
+Trojan: ${TROJAN_PORT}  (TLS加密)
+VMess:  ${VMESS_PORT}  (TLS加密)
+SS:     ${SS_PORT}  (无加密)
+Web:    ${WEB_PORT}
+
+【📱 快速连接链接】
+VLESS: ${VLESS_URL}
+Trojan: ${TROJAN_URL}
+VMess: ${VMESS_URL}
+SS: ${SS_URL}
+
+【🌐 管理面板】
+http://${SERVER_IP}:${WEB_PORT}
+
+【📝 查看用户】
+PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py list
+INFOEOF
+
+chmod 644 ${CONFIG_DIR}/install_info.txt
+echo -e "${GREEN}✓${PLAIN} 安装信息已保存到: ${YELLOW}${CONFIG_DIR}/install_info.txt${PLAIN}"
+
+echo ""
+echo -e "${YELLOW}═══════════════════════════════════════════════════════════${PLAIN}"
+echo -e "${YELLOW}  正在生成连接二维码...${PLAIN}"
+echo -e "${YELLOW}═══════════════════════════════════════════════════════════${PLAIN}"
+echo ""
+
+# 显示VLESS二维码
+if command -v qrencode &>/dev/null; then
+    echo -e "${CYAN}VLESS 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${VLESS_URL}"
+    echo ""
+fi
+
+# 显示Trojan二维码
+if command -v qrencode &>/dev/null; then
+    echo -e "${CYAN}Trojan 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${TROJAN_URL}"
+    echo ""
+fi
+
+# 显示Shadowsocks二维码
+if command -v qrencode &>/dev/null; then
+    echo -e "${CYAN}Shadowsocks 二维码:${PLAIN}"
+    qrencode -t ANSIUTF8 "${SS_URL}"
+    echo ""
+fi
+
 echo -e "${CYAN}快速连接 (VLESS):${PLAIN}"
 echo -e "${VLESS_URL}"
 echo ""
