@@ -333,8 +333,12 @@ EOF
 PROXY_WEB_SRC=""
 if [[ -f "${SCRIPT_DIR}/proxy_web_fixed.py" ]]; then
     PROXY_WEB_SRC="${SCRIPT_DIR}/proxy_web_fixed.py"
+elif [[ -f "${SCRIPT_DIR}/proxy_web.py" ]]; then
+    PROXY_WEB_SRC="${SCRIPT_DIR}/proxy_web.py"
 elif [[ -f "proxy-web.py" ]]; then
     PROXY_WEB_SRC="proxy-web.py"
+elif [[ -f "proxy_web.py" ]]; then
+    PROXY_WEB_SRC="proxy_web.py"
 elif [[ -f "proxy_manager-src/proxy_web_fixed.py" ]]; then
     PROXY_WEB_SRC="proxy_manager-src/proxy_web_fixed.py"
 elif [[ -f "proxy_manager-src/proxy_web.py" ]]; then

@@ -10,7 +10,10 @@ import json
 import os
 import hashlib
 from datetime import datetime
-import yaml
+try:
+    import yaml
+except ImportError:
+    yaml = None
 from pathlib import Path
 
 CONFIG_FILE = "/etc/proxy-manager/config.json"
