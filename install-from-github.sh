@@ -77,12 +77,16 @@ unzip -q "$ZIP_FILE" -d "$SRC_DIR"
 echo "🔧 正在安装..."
 cd "$SRC_DIR"
 
-if [ -f "quick_install.sh" ]; then
+# 优先使用 one_click_install.sh（最新版本）
+if [ -f "one_click_install.sh" ]; then
+    echo "✓ 找到 one_click_install.sh（推荐）"
+    sudo bash one_click_install.sh
+elif [ -f "quick_install.sh" ]; then
+    echo "✓ 找到 quick_install.sh"
     sudo bash quick_install.sh
 elif [ -f "install.sh" ]; then
+    echo "✓ 找到 install.sh"
     sudo bash install.sh
-elif [ -f "one_click_install.sh" ]; then
-    sudo bash one_click_install.sh
 else
     echo "❌ 未找到安装脚本"
     exit 1
