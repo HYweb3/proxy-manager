@@ -410,6 +410,9 @@ if __name__ == '__main__':
         users = manager.list_users()
         for user in users:
             print(f"{user['username']:<15} {user['uuid']:<20} {user['traffic']:<15} {user['status']:<15}")
+    elif command == 'update_config':
+        manager.update_xray_config()
+        print("XRay configuration updated successfully")
 PYEOF
 fi
 
