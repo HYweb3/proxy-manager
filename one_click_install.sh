@@ -18,11 +18,11 @@ BOLD="\033[1m"
 CONFIG_DIR="/etc/proxy-manager"
 WEB_DIR="/var/www/proxy-manager"
 # 端口配置
+VLESS_PORT=443     # VLESS (TLS加密)
+TROJAN_PORT=501    # Trojan (TLS加密)
+VMESS_PORT=502     # VMess (TLS加密)
+SS_PORT=503        # Shadowsocks (无加密)
 WEB_PORT=5080      # Web管理界面
-PROXY_PORT=500     # VLESS
-TROJAN_PORT=501    # Trojan
-VMESS_PORT=502     # VMess
-SS_PORT=503        # Shadowsocks
 
 echo -e "${MAGENTA}"
 cat << 'EOF'
@@ -223,18 +223,20 @@ echo -e "${GREEN}✓${PLAIN} 系统服务创建完成"
 echo ""
 echo -e "${BLUE}[7/8]${PLAIN} 配置防火墙..."
 if command -v firewall-cmd &>/dev/null; then
-    firewall-cmd --permanent --add-port=${PROXY_PORT}/tcp 2>/dev/null
-    firewall-cmd --permanent --add-port=$((PROXY_PORT+2))/tcp 2>/dev/null
-    firewall-cmd --permanent --add-port=$((PROXY_PORT+3))/tcp 2>/dev/null
-    firewall-cmd --permanent --add-port=$((PROXY_PORT+4))/tcp 2>/dev/null
+    firewall-cmd --permanent --add-port=${VLESS_PORT}/tcp 2>/dev/null
+    firewall-cmd --permanent --add-port=${TROJAN_PORT}/tcp 2>/dev/null
+    firewall-cmd --permanent --add-port=${VMESS_PORT}/tcp 2>/dev/null
+    firewall-cmd --permanent --add-port=${SS_PORT}/tcp 2>/dev/null
+    firewall-cmd --permanent --add-port=${SS_PORT}/udp 2>/dev/null
     firewall-cmd --permanent --add-port=${WEB_PORT}/tcp 2>/dev/null
     firewall-cmd --reload 2>/dev/null
     echo -e "${GREEN}✓${PLAIN} 防火墙规则已添加"
 elif command -v ufw &>/dev/null; then
-    ufw allow ${PROXY_PORT}/tcp 2>/dev/null
-    ufw allow $((PROXY_PORT+2))/tcp 2>/dev/null
-    ufw allow $((PROXY_PORT+3))/tcp 2>/dev/null
-    ufw allow $((PROXY_PORT+4))/tcp 2>/dev/null
+    ufw allow ${VLESS_PORT}/tcp 2>/dev/null
+    ufw allow ${TROJAN_PORT}/tcp 2>/dev/null
+    ufw allow ${VMESS_PORT}/tcp 2>/dev/null
+    ufw allow ${SS_PORT}/tcp 2>/dev/null
+    ufw allow ${SS_PORT}/udp 2>/dev/null
     ufw allow ${WEB_PORT}/tcp 2>/dev/null
     echo -e "${GREEN}✓${PLAIN} 防火墙规则已添加"
 else
@@ -282,10 +284,10 @@ echo -e "${CYAN}服务器信息:${PLAIN}"
 echo -e "   服务器IP:     ${GREEN}${SERVER_IP}${PLAIN}"
 echo ""
 echo -e "${CYAN}代理端口配置:${PLAIN}"
-echo -e "   VLESS端口:    ${GREEN}${PROXY_PORT}${PLAIN} (TLS加密)"
-echo -e "   Trojan端口:   ${GREEN}$((PROXY_PORT+2))${PLAIN} (TLS加密)"
-echo -e "   VMess端口:    ${GREEN}$((PROXY_PORT+3))${PLAIN} (TLS加密)"
-echo -e "   SS端口:       ${GREEN}$((PROXY_PORT+4))${PLAIN} (无加密)"
+echo -e "   VLESS端口:    ${GREEN}${VLESS_PORT}${PLAIN} (TLS加密)"
+echo -e "   Trojan端口:   ${GREEN}${TROJAN_PORT}${PLAIN} (TLS加密)"
+echo -e "   VMess端口:    ${GREEN}${VMESS_PORT}${PLAIN} (TLS加密)"
+echo -e "   SS端口:       ${GREEN}${SS_PORT}${PLAIN} (无加密)"
 echo ""
 echo -e "${CYAN}默认用户信息:${PLAIN}"
 echo -e "   用户名:       ${GREEN}${USER_NAME}${PLAIN}"
@@ -294,8 +296,9 @@ echo -e "   流量限制:     ${GREEN}无限${PLAIN}"
 echo ""
 
 # 生成代理连接URL
-VLESS_URL="vless://${USER_UUID}@${SERVER_IP}:${PROXY_PORT}?encryption=none&security=tls&type=tcp#ProxyManager_${USER_NAME}"
+VLESS_URL="vless://${USER_UUID}@${SERVER_IP}:${VLESS_PORT}?encryption=none&security=tls&type=tcp#ProxyManager_${USER_NAME}"
 TROJAN_URL="trojan://${USER_PASS}@${SERVER_IP}:${TROJAN_PORT}?security=tls&type=tcp#ProxyManager_${USER_NAME}"
+SS_URL="ss://aes-256-gcm:${USER_PASS}@${SERVER_IP}:${SS_PORT}#ProxyManager_${USER_NAME}"
 
 echo -e "${CYAN}快速连接 (VLESS):${PLAIN}"
 echo -e "${VLESS_URL}"
@@ -346,7 +349,7 @@ UUID: ${USER_UUID}
 ========================================
 【🔌 端口配置】
 ========================================
-VLESS:  ${PROXY_PORT}  (TLS加密)
+VLESS:  ${VLESS_PORT}  (TLS加密)
 Trojan: ${TROJAN_PORT}  (TLS加密)
 VMess:  ${VMESS_PORT}  (TLS加密)
 SS:     ${SS_PORT}  (无加密)
@@ -361,6 +364,9 @@ ${VLESS_URL}
 2️⃣ Trojan:
 ${TROJAN_URL}
 
+3️⃣ Shadowsocks:
+${SS_URL}
+
 ========================================
 【🖼️ 二维码】
 ========================================
@@ -371,6 +377,9 @@ VLESS 二维码:
 
 Trojan 二维码:
   qrencode -t ANSIUTF8 '${TROJAN_URL}'
+
+Shadowsocks 二维码:
+  qrencode -t ANSIUTF8 '${SS_URL}'
 
 ========================================
 【⚡ 服务管理】

@@ -21,10 +21,10 @@ USERS_FILE="${CONFIG_DIR}/users.json"
 WEB_DIR="/var/www/proxy-manager"
 
 # 端口配置
-PROXY_PORT=500     # VLESS
-TROJAN_PORT=501    # Trojan
-VMESS_PORT=502     # VMess
-SS_PORT=503        # Shadowsocks
+VLESS_PORT=443     # VLESS (TLS加密)
+TROJAN_PORT=501    # Trojan (TLS加密)
+VMESS_PORT=502     # VMess (TLS加密)
+SS_PORT=503        # Shadowsocks (无加密)
 WEB_PORT=5080      # Web管理界面
 
 # 检查root权限
@@ -301,23 +301,73 @@ class ProxyManager:
                 json.dump(config, f, indent=2)
             return
 
+        # VLESS clients (443端口 - TLS加密)
         vless_clients = [{'id': u['uuid'], 'flow': '', 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+
+        # Trojan clients (501端口 - TLS加密)
+        trojan_clients = [{'password': u['password'], 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+
+        # VMess clients (502端口 - TLS加密)
+        vmess_clients = [{'id': u['uuid'], 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+
+        # Shadowsocks clients (503端口 - 无加密)
+        ss_clients = [{'email': f"{u['username']}@proxy-manager", 'password': u['password'], 'method': 'aes-256-gcm'} for u in enabled_users]
+
         config = {
             "log": {"access": "/var/log/xray/access.log", "error": "/var/log/xray/error.log", "loglevel": "info"},
-            "inbounds": [{
-                "port": 443,
-                "protocol": "vless",
-                "settings": {"clients": vless_clients, "decryption": "none"},
-                "streamSettings": {
-                    "network": "tcp",
-                    "security": "tls",
-                    "tlsSettings": {
-                        "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
-                        "serverName": self.domain,
-                        "allowInsecure": False
+            "inbounds": [
+                # VLESS - 端口443 (TLS加密)
+                {
+                    "port": 443,
+                    "protocol": "vless",
+                    "settings": {"clients": vless_clients, "decryption": "none"},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
+                            "serverName": self.domain,
+                            "allowInsecure": False
+                        }
                     }
+                },
+                # Trojan - 端口501 (TLS加密)
+                {
+                    "port": 501,
+                    "protocol": "trojan",
+                    "settings": {"clients": trojan_clients},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
+                            "serverName": self.domain,
+                            "allowInsecure": False
+                        }
+                    }
+                },
+                # VMess - 端口502 (TLS加密)
+                {
+                    "port": 502,
+                    "protocol": "vmess",
+                    "settings": {"clients": vmess_clients},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
+                            "serverName": self.domain,
+                            "allowInsecure": False
+                        }
+                    }
+                },
+                # Shadowsocks - 端口503 (无加密)
+                {
+                    "port": 503,
+                    "protocol": "shadowsocks",
+                    "settings": {"clients": ss_clients, "network": "tcp,udp"}
                 }
-            }],
+            ],
             "outbounds": [{"protocol": "freedom", "settings": {}}]
         }
         with open(CONFIG_FILE, 'w') as f:
@@ -328,12 +378,19 @@ class ProxyManager:
 
     def generate_vmess_url(self, user):
         import base64
-        vmess_config = {"v": "2", "ps": f"ProxyManager_{user['username']}", "add": self.domain, "port": "443", "id": user['uuid'], "net": "tcp", "type": "none", "tls": "tls"}
+        vmess_config = {"v": "2", "ps": f"ProxyManager_{user['username']}", "add": self.domain, "port": "502", "id": user['uuid'], "net": "tcp", "type": "none", "tls": "tls"}
         b64 = base64.b64encode(json.dumps(vmess_config, separators=(',', ':')).encode()).decode()
         return f"vmess://{b64}"
 
     def generate_trojan_url(self, user):
-        return f"trojan://{user['password']}@{self.domain}:443?security=tls&type=tcp#ProxyManager_{user['username']}"
+        return f"trojan://{user['password']}@{self.domain}:501?security=tls&type=tcp#ProxyManager_{user['username']}"
+
+    def generate_ss_url(self, user):
+        import base64
+        ss_method = "aes-256-gcm"
+        ss_info = f"{ss_method}:{user['password']}@{self.domain}:503"
+        ss_b64 = base64.b64encode(ss_info.encode()).decode().rstrip('=')
+        return f"ss://{ss_b64}#ProxyManager_{user['username']}"
 
     def list_users(self):
         result = []
@@ -451,7 +508,7 @@ start_service() {
 
     # 开放防火墙端口
     if [[ "${release}" == "centos" ]]; then
-        firewall-cmd --permanent --add-port=${PROXY_PORT}/tcp 2>/dev/null
+        firewall-cmd --permanent --add-port=${VLESS_PORT}/tcp 2>/dev/null
         firewall-cmd --permanent --add-port=${TROJAN_PORT}/tcp 2>/dev/null
         firewall-cmd --permanent --add-port=${VMESS_PORT}/tcp 2>/dev/null
         firewall-cmd --permanent --add-port=${SS_PORT}/tcp 2>/dev/null
@@ -459,7 +516,7 @@ start_service() {
         firewall-cmd --permanent --add-port=${WEB_PORT}/tcp 2>/dev/null
         firewall-cmd --reload 2>/dev/null
     else
-        ufw allow ${PROXY_PORT}/tcp 2>/dev/null
+        ufw allow ${VLESS_PORT}/tcp 2>/dev/null
         ufw allow ${TROJAN_PORT}/tcp 2>/dev/null
         ufw allow ${VMESS_PORT}/tcp 2>/dev/null
         ufw allow ${SS_PORT}/tcp 2>/dev/null
@@ -469,10 +526,10 @@ start_service() {
 
     echo -e "${GREEN}服务启动成功！${PLAIN}"
     echo -e "${YELLOW}端口配置:${PLAIN}"
-    echo -e "  VLESS:     ${PROXY_PORT}"
-    echo -e "  Trojan:    ${TROJAN_PORT}"
-    echo -e "  VMess:     ${VMESS_PORT}"
-    echo -e "  SS:        ${SS_PORT}"
+    echo -e "  VLESS:     ${VLESS_PORT} (TLS加密)"
+    echo -e "  Trojan:    ${TROJAN_PORT} (TLS加密)"
+    echo -e "  VMess:     ${VMESS_PORT} (TLS加密)"
+    echo -e "  SS:        ${SS_PORT} (无加密)"
     echo -e "  Web管理:   ${WEB_PORT}"
     echo -e "${YELLOW}管理面板: http://${IP}:${WEB_PORT}${PLAIN}"
 }

@@ -1,0 +1,9 @@
+# Proxy Manager Python依赖包
+# 安装命令: pip3 install -r requirements.txt
+
+flask>=3.0.0
+flask-qrcode>=3.2.0
+qrcode>=8.0
+pillow>=10.0.0
+pyyaml>=6.0
+cryptography>=41.0.0

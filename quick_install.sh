@@ -306,7 +306,7 @@ class ProxyManager:
             "log": {"access": "/var/log/xray/access.log", "error": "/var/log/xray/error.log", "loglevel": "info"},
             "inbounds": [
                 {
-                    "port": 500,
+                    "port": 443,
                     "protocol": "vless",
                     "settings": {
                         "clients": vless_clients,
@@ -373,7 +373,7 @@ class ProxyManager:
         os.system("systemctl reload xray 2>/dev/null")
 
     def generate_vless_url(self, user):
-        return f"vless://{user['uuid']}@{self.domain}:500?encryption=none&security=tls&type=tcp#ProxyManager_{user['username']}"
+        return f"vless://{user['uuid']}@{self.domain}:443?encryption=none&security=tls&type=tcp#ProxyManager_{user['username']}"
 
     def generate_vmess_url(self, user):
         import base64

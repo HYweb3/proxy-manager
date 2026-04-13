@@ -224,6 +224,9 @@ class ProxyManager:
             return
 
         vless_clients = [{'id': u['uuid'], 'flow': '', 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+        trojan_clients = [{'password': u['password'], 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+        vmess_clients = [{'id': u['uuid'], 'email': f"{u['username']}@proxy-manager"} for u in enabled_users]
+        ss_clients = [{'email': f"{u['username']}@proxy-manager", 'password': u['password'], 'method': 'aes-256-gcm'} for u in enabled_users]
 
         config = {
             "log": {"access": "/var/log/xray/access.log", "error": "/var/log/xray/error.log", "loglevel": "info"},
@@ -244,6 +247,39 @@ class ProxyManager:
                             "allowInsecure": False
                         }
                     }
+                },
+                {
+                    "port": 501,
+                    "protocol": "trojan",
+                    "settings": {"clients": trojan_clients},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
+                            "serverName": self.domain,
+                            "allowInsecure": False
+                        }
+                    }
+                },
+                {
+                    "port": 502,
+                    "protocol": "vmess",
+                    "settings": {"clients": vmess_clients},
+                    "streamSettings": {
+                        "network": "tcp",
+                        "security": "tls",
+                        "tlsSettings": {
+                            "certificates": [{"certificateFile": f"{self.config_dir}/server.crt", "keyFile": f"{self.config_dir}/server.key"}],
+                            "serverName": self.domain,
+                            "allowInsecure": False
+                        }
+                    }
+                },
+                {
+                    "port": 503,
+                    "protocol": "shadowsocks",
+                    "settings": {"clients": ss_clients, "network": "tcp,udp"}
                 }
             ],
             "outbounds": [{"protocol": "freedom", "settings": {}}]
@@ -256,12 +292,19 @@ class ProxyManager:
 
     def generate_vmess_url(self, user):
         import base64
-        vmess_config = {"v": "2", "ps": f"ProxyManager_{user['username']}", "add": self.domain, "port": "443", "id": user['uuid'], "net": "tcp", "type": "none", "tls": "tls"}
+        vmess_config = {"v": "2", "ps": f"ProxyManager_{user['username']}", "add": self.domain, "port": "502", "id": user['uuid'], "net": "tcp", "type": "none", "tls": "tls"}
         b64 = base64.b64encode(json.dumps(vmess_config, separators=(',', ':')).encode()).decode()
         return f"vmess://{b64}"
 
     def generate_trojan_url(self, user):
-        return f"trojan://{user['password']}@{self.domain}:443?security=tls&type=tcp#ProxyManager_{user['username']}"
+        return f"trojan://{user['password']}@{self.domain}:501?security=tls&type=tcp#ProxyManager_{user['username']}"
+
+    def generate_ss_url(self, user):
+        import base64
+        ss_method = "aes-256-gcm"
+        ss_info = f"{ss_method}:{user['password']}@{self.domain}:503"
+        ss_b64 = base64.b64encode(ss_info.encode()).decode().rstrip('=')
+        return f"ss://{ss_b64}#ProxyManager_{user['username']}"
 
     def list_users(self):
         result = []
