@@ -17,7 +17,10 @@ from PIL import Image
 import qrcode
 
 # 添加配置管理器路径
-sys.path.insert(0, '/etc/proxy-manager')
+CONFIG_PATH = os.path.expanduser('~/.proxy-manager')
+if os.path.exists('/etc/proxy-manager'):
+    CONFIG_PATH = '/etc/proxy-manager'
+sys.path.insert(0, CONFIG_PATH)
 from proxy_manager import ProxyManager
 
 app = Flask(__name__)
@@ -217,7 +220,7 @@ def clash_config(username):
 
 if __name__ == '__main__':
     # 创建模板目录
-    template_dir = '/var/www/proxy-manager/templates'
+    template_dir = os.path.expanduser('~/.proxy-manager/templates')
     os.makedirs(template_dir, exist_ok=True)
 
     # 创建HTML模板
@@ -1157,8 +1160,9 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
     # 从配置文件读取Web端口
     web_port = 5080  # 默认端口
     try:
-        if os.path.exists('/etc/proxy-manager/install_info.txt'):
-            with open('/etc/proxy-manager/install_info.txt', 'r') as f:
+        config_file = os.path.join(CONFIG_PATH, 'install_info.txt')
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
                 for line in f:
                     if 'Web:' in line:
                         web_port = int(line.split(':')[1].strip())
