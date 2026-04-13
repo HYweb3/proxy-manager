@@ -138,7 +138,7 @@ if [[ -z "$XRAY_VERSION" ]]; then
 fi
 
 echo -e "${YELLOW}正在下载 XRay-core ${XRAY_VERSION} (linux-${XRAY_ARCH})${PLAIN}"
-wget -q --show-progress --no-check-certificate \
+wget --no-check-certificate \
     "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${XRAY_ARCH}.zip" \
     -O /tmp/xray.zip
 

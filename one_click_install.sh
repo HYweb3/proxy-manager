@@ -97,7 +97,7 @@ if [[ -z "$XRAY_VERSION" ]]; then
     XRAY_VERSION="v1.8.24"
 fi
 
-wget -q --show-progress --no-check-certificate \
+wget --no-check-certificate \
     "https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION}/Xray-linux-${XRAY_ARCH}.zip" \
     -O /tmp/xray.zip
 
