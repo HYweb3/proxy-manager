@@ -166,7 +166,7 @@ chmod +x ${CONFIG_DIR}/proxy_manager.py
 
 # 生成XRay配置文件 (关键步骤!)
 echo -e "${YELLOW}正在生成 XRay 配置文件...${PLAIN}"
-python3 ${CONFIG_DIR}/proxy_manager.py update_config
+PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config
 
 if [[ ! -f "${CONFIG_DIR}/config.json" ]]; then
     echo -e "${RED}✗ XRay配置文件生成失败${PLAIN}"

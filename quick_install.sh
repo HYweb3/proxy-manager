@@ -527,7 +527,7 @@ echo -e "${GREEN}✓${PLAIN} 程序文件部署完成"
 # 步骤5.5: 生成XRay配置文件
 echo ""
 echo -e "${YELLOW}正在生成 XRay 配置文件...${PLAIN}"
-python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null
+PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null
 
 if [[ -f "${CONFIG_DIR}/config.json" ]]; then
     echo -e "${GREEN}✓${PLAIN} XRay配置文件生成完成"
