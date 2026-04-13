@@ -347,6 +347,10 @@ class ProxyManager:
 
 if __name__ == '__main__':
     import sys
+    import io
+    # Set UTF-8 encoding for stdout
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
     manager = ProxyManager()
     command = sys.argv[1] if len(sys.argv) > 1 else ''
     if command == 'list':

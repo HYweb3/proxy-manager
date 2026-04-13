@@ -276,6 +276,10 @@ class ProxyManager:
 
 if __name__ == '__main__':
     import sys
+    import io
+    # Set UTF-8 encoding for stdout
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
     manager = ProxyManager()
     command = sys.argv[1] if len(sys.argv) > 1 else ''
     if command == 'list':
@@ -547,7 +551,7 @@ echo -e "   - 复制配置链接"
 echo -e ""
 echo -e "${BLUE}常用命令:${PLAIN}"
 echo -e "添加用户:    ${YELLOW}cd /home/hnbwww/proxy-manager && ./install.sh${PLAIN} (选择2)"
-echo -e "查看用户:    ${YELLOW}python3 /etc/proxy-manager/proxy_manager.py list${PLAIN}"
+echo -e "查看用户:    ${YELLOW}PYTHONIOENCODING=utf-8 python3 /etc/proxy-manager/proxy_manager.py list${PLAIN}"
 echo -e "重启服务:    ${YELLOW}systemctl restart xray proxy-web${PLAIN}"
 echo -e "查看日志:    ${YELLOW}tail -f /var/log/xray/access.log${PLAIN}"
 echo ""

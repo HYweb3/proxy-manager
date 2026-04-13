@@ -404,6 +404,10 @@ class ProxyManager:
 
 if __name__ == '__main__':
     import sys
+    import io
+    # Set UTF-8 encoding for stdout
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
     manager = ProxyManager()
     command = sys.argv[1] if len(sys.argv) > 1 else ''
     if command == 'list':
@@ -730,7 +734,7 @@ echo -e "   - Clash (全平台)"
 echo -e "   - 其他支持VLESS/VMESS/Trojan/SS的客户端"
 echo ""
 echo -e "${CYAN}3. 常用命令:${PLAIN}"
-echo -e "   查看用户列表:   ${YELLOW}python3 ${CONFIG_DIR}/proxy_manager.py list${PLAIN}"
+echo -e "   查看用户列表:   ${YELLOW}PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py list${PLAIN}"
 echo -e "   重启服务:       ${YELLOW}systemctl restart xray proxy-web${PLAIN}"
 echo -e "   查看XRay日志:   ${YELLOW}tail -f /var/log/xray/access.log${PLAIN}"
 echo -e "   查看Web日志:    ${YELLOW}journalctl -u proxy-web -f${PLAIN}"
@@ -837,7 +841,7 @@ Shadowsocks 二维码:
 【📊 用户管理】
 ========================================
 查看用户列表:
-  python3 ${CONFIG_DIR}/proxy_manager.py list
+  PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py list
 
 添加新用户:
   python3 ${CONFIG_DIR}/proxy_manager.py add <用户名> <UUID> <密码>
