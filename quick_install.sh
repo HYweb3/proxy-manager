@@ -426,7 +426,7 @@ import qrcode
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-exec(open('/etc/proxy-manager/proxy_manager.py').read())
+exec(open('/etc/proxy-manager/proxy_manager.py', encoding='utf-8').read())
 manager = ProxyManager()
 
 LOGIN_HTML = '''<!DOCTYPE html>
