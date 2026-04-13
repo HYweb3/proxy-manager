@@ -71,11 +71,17 @@ fi
 # 解压
 echo "📦 正在解压..."
 rm -rf "$SRC_DIR"
+mkdir -p "$SRC_DIR"
 unzip -q "$ZIP_FILE" -d "$SRC_DIR"
 
 # 进入目录并执行安装
 echo "🔧 正在安装..."
 cd "$SRC_DIR"
+
+# 如果有子目录，进入其中
+if [ -d "proxy-manager-src" ] && [ -f "proxy-manager-src/one_click_install.sh" ]; then
+    cd "proxy-manager-src"
+fi
 
 # 优先使用 one_click_install.sh（最新版本）
 if [ -f "one_click_install.sh" ]; then

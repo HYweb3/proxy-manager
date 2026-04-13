@@ -329,8 +329,24 @@ WantedBy=multi-user.target
 EOF
 
 # Web服务 (使用proxy_web.py)
-if [[ -f "${SCRIPT_DIR}/proxy_web.py" ]]; then
-    cp ${SCRIPT_DIR}/proxy_web.py ${WEB_DIR}/
+# 查找 proxy_web.py 文件
+PROXY_WEB_SRC=""
+if [[ -f "${SCRIPT_DIR}/proxy_web_fixed.py" ]]; then
+    PROXY_WEB_SRC="${SCRIPT_DIR}/proxy_web_fixed.py"
+elif [[ -f "proxy-web.py" ]]; then
+    PROXY_WEB_SRC="proxy-web.py"
+elif [[ -f "proxy_manager-src/proxy_web_fixed.py" ]]; then
+    PROXY_WEB_SRC="proxy_manager-src/proxy_web_fixed.py"
+elif [[ -f "proxy_manager-src/proxy_web.py" ]]; then
+    PROXY_WEB_SRC="proxy_manager-src/proxy_web.py"
+fi
+
+if [[ -n "${PROXY_WEB_SRC}" ]]; then
+    echo -e "${GREEN}✓${PLAIN} 找到 Web 界面文件: ${PROXY_WEB_SRC}"
+    mkdir -p ${WEB_DIR}
+    cp ${PROXY_WEB_SRC} ${WEB_DIR}/proxy_web.py
+    chmod +x ${WEB_DIR}/proxy_web.py
+
     cat > /etc/systemd/system/proxy-web.service << EOF
 [Unit]
 Description=Proxy Manager Web Interface
@@ -347,6 +363,11 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
+    echo -e "${GREEN}✓${PLAIN} Web 服务配置完成"
+    WEB_INSTALLED=true
+else
+    echo -e "${YELLOW}⚠${PLAIN} 未找到 Web 界面文件，跳过安装"
+    WEB_INSTALLED=false
 fi
 
 systemctl daemon-reload
@@ -380,10 +401,12 @@ fi
 echo ""
 echo -e "${BLUE}[8/8]${PLAIN} 启动服务..."
 
-systemctl enable xray proxy-web 2>/dev/null
+systemctl enable xray 2>/dev/null
 systemctl restart xray
 sleep 2
-if [[ -f "${WEB_DIR}/proxy_web.py" ]]; then
+
+if [[ "${WEB_INSTALLED}" == "true" ]]; then
+    systemctl enable proxy-web 2>/dev/null
     systemctl restart proxy-web
     sleep 2
 fi
@@ -397,10 +420,15 @@ else
     echo -e "   XRay服务:      ${RED}✗ 未运行${PLAIN}"
 fi
 
-if systemctl is-active --quiet proxy-web; then
-    echo -e "   Web管理界面:   ${GREEN}✓ 运行中${PLAIN}"
+if [[ "${WEB_INSTALLED}" == "true" ]]; then
+    if systemctl is-active --quiet proxy-web; then
+        echo -e "   Web管理界面:   ${GREEN}✓ 运行中${PLAIN}"
+    else
+        echo -e "   Web管理界面:   ${RED}✗ 启动失败${PLAIN}"
+    fi
 else
     echo -e "   Web管理界面:   ${YELLOW}- 未安装${PLAIN}"
+fi
 fi
 
 # 显示安装信息
