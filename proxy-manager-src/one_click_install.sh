@@ -6,6 +6,8 @@
 # Web管理界面 | 用户管理 | 流量统计
 #############################################
 
+set -e  # 遇到错误立即退出
+
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -21,7 +23,6 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     CONFIG_DIR="$HOME/.proxy-manager"
     WEB_DIR="$HOME/.proxy-manager"
     PYTHON_CMD="python3"
-    PKG_INSTALL="brew install"
 else
     OS="linux"
     if [[ $EUID -ne 0 ]]; then
@@ -32,7 +33,6 @@ else
     CONFIG_DIR="/etc/proxy-manager"
     WEB_DIR="/var/www/proxy-manager"
     PYTHON_CMD="python3"
-    PKG_INSTALL="apt-get install -y"
 fi
 
 # 端口配置
@@ -80,43 +80,48 @@ if [[ ! "$confirm" =~ ^[Yy]$|^$ ]]; then
     exit 0
 fi
 
-# 步骤1: 安装Python依赖
+# 步骤1: 检查Python
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
-echo -e "${BOLD}${CYAN}[1/5] 安装 Python 依赖${PLAIN}"
+echo -e "${BOLD}${CYAN}[1/6] 检查 Python 环境${PLAIN}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
 
-if [[ "$OS" == "macos" ]]; then
-    # macOS - 检查并安装依赖
-    if ! command -v brew &>/dev/null; then
-        echo -e "${YELLOW}⚠ Homebrew 未安装，请先安装: ${PLAIN}/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-        exit 1
-    fi
-
-    # 安装Python依赖
-    pip3 install --break-system-packages flask flask-qrcode qrcode pillow pyyaml 2>/dev/null || \
-    pip3 install flask flask-qrcode qrcode pillow pyyaml 2>/dev/null
-
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓${PLAIN} Python依赖安装完成"
-    else
-        echo -e "${RED}✗${PLAIN} Python依赖安装失败"
-        exit 1
-    fi
-else
-    # Linux
-    pip3 install -q flask flask-qrcode qrcode pillow pyyaml 2>/dev/null || \
-    pip3 install -q flask flask-qrcode qrcode pillow pyyaml --break-system-packages 2>/dev/null
-    echo -e "${GREEN}✓${PLAIN} Python依赖安装完成"
+if ! command -v python3 &>/dev/null; then
+    echo -e "${RED}✗ Python3 未安装${PLAIN}"
+    exit 1
 fi
 
-# 步骤2: 创建配置目录和文件
+PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
+echo -e "${GREEN}✓${PLAIN} Python版本: ${PYTHON_VERSION}"
+
+# 步骤2: 安装Python依赖
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
-echo -e "${BOLD}${CYAN}[2/5] 创建配置目录${PLAIN}"
+echo -e "${BOLD}${CYAN}[2/6] 安装 Python 依赖${PLAIN}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
 
-# 创建目录
+echo "安装 Flask 和相关依赖..."
+
+if [[ "$OS" == "macos" ]]; then
+    pip3 install --break-system-packages flask flask-qrcode qrcode pillow pyyaml 2>/dev/null || \
+    pip3 install flask flask-qrcode qrcode pillow pyyaml 2>/dev/null
+else
+    pip3 install -q flask flask-qrcode qrcode pillow pyyaml 2>/dev/null || \
+    pip3 install -q flask flask-qrcode qrcode pillow pyyaml --break-system-packages 2>/dev/null
+fi
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓${PLAIN} Python依赖安装完成"
+else
+    echo -e "${YELLOW}⚠ 部分依赖安装失败，尝试继续...${PLAIN}"
+fi
+
+# 步骤3: 创建配置目录
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
+echo -e "${BOLD}${CYAN}[3/6] 创建配置目录${PLAIN}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
+
 mkdir -p ${CONFIG_DIR}
 mkdir -p ${WEB_DIR}/templates
 mkdir -p ${WEB_DIR}/logs
@@ -124,36 +129,36 @@ mkdir -p ${WEB_DIR}/logs
 echo -e "${GREEN}✓${PLAIN} 配置目录: ${CONFIG_DIR}"
 echo -e "${GREEN}✓${PLAIN} Web目录: ${WEB_DIR}"
 
-# 步骤3: 部署程序文件
+# 步骤4: 部署程序文件
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
-echo -e "${BOLD}${CYAN}[3/5] 部署程序文件${PLAIN}"
+echo -e "${BOLD}${CYAN}[4/6] 部署程序文件${PLAIN}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
 
-# 复制proxy_manager.py
+# 部署proxy_manager.py
 if [[ -f "${SCRIPT_DIR}/proxy_manager.py" ]]; then
     cp ${SCRIPT_DIR}/proxy_manager.py ${CONFIG_DIR}/
     chmod +x ${CONFIG_DIR}/proxy_manager.py
     echo -e "${GREEN}✓${PLAIN} proxy_manager.py 已部署"
 else
-    echo -e "${YELLOW}⚠ proxy_manager.py 不存在，正在生成...${PLAIN}"
-    # 这里可以添加生成基础版本的代码
+    echo -e "${RED}✗ proxy_manager.py 不存在${PLAIN}"
+    exit 1
 fi
 
-# 复制proxy_web.py（如果存在）或使用脚本中的版本
+# 部署proxy_web.py
 if [[ -f "${SCRIPT_DIR}/proxy_web.py" ]]; then
-    cp ${SCRIPT_DIR}/proxy_web.py ${WEB_DIR}/
-    chmod +x ${WEB_DIR}/proxy_web.py
-    echo -e "${GREEN}✓${PLAIN} proxy_web.py 已部署"
+    # 使用源文件而不是复制，确保路径正确
+    WEB_PY_PATH="${SCRIPT_DIR}/proxy_web.py"
+    echo -e "${GREEN}✓${PLAIN} proxy_web.py 位置: ${WEB_PY_PATH}"
 else
     echo -e "${RED}✗ proxy_web.py 不存在${PLAIN}"
     exit 1
 fi
 
-# 步骤4: 生成配置
+# 步骤5: 生成配置
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
-echo -e "${BOLD}${CYAN}[4/5] 生成配置${PLAIN}"
+echo -e "${BOLD}${CYAN}[5/6] 生成配置${PLAIN}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
 
 # 生成管理员密码
@@ -164,7 +169,7 @@ if [[ "$OS" == "macos" ]]; then
     SERVER_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "127.0.0.1")
 else
     ADMIN_PASS=$(openssl rand -base64 16 | tr -d '=+/' | cut -c1-16)
-    USER_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c "import uuid; print(uuid.uuid4())")
+    USER_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || ${PYTHON_CMD} -c "import uuid; print(uuid.uuid4())")
     USER_PASS=$(openssl rand -base64 16 | tr -d '=+/' | cut -c1-16)
     SERVER_IP=$(curl -s4 ip.sb 2>/dev/null || curl -s4 ifconfig.me 2>/dev/null || echo "your-server-ip")
 fi
@@ -192,27 +197,26 @@ EOF
 
 echo -e "${GREEN}✓${PLAIN} 用户数据库已生成"
 
-# 步骤5: 启动Web服务
+# 步骤6: 启动Web服务
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
-echo -e "${BOLD}${CYAN}[5/5] 启动 Web 服务${PLAIN}"
+echo -e "${BOLD}${CYAN}[6/6] 启动 Web 服务${PLAIN}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${PLAIN}"
 
 # 停止已存在的服务
-if [[ "$OS" == "macos" ]]; then
-    # macOS - 使用launchctl或直接kill
-    pkill -f "proxy_web.py" 2>/dev/null
-else
-    # Linux - 使用systemctl
-    systemctl stop proxy-web 2>/dev/null
-fi
+pkill -f "proxy_web.py" 2>/dev/null || true
+sleep 1
 
 # 启动Web服务
-cd ${WEB_DIR}
-nohup ${PYTHON_CMD} ${WEB_DIR}/proxy_web.py > ${WEB_DIR}/logs/web.log 2>&1 &
+cd ${SCRIPT_DIR}
+echo "启动目录: $(pwd)"
+echo "Python文件: ${WEB_PY_PATH}"
+
+nohup ${PYTHON_CMD} ${WEB_PY_PATH} > ${WEB_DIR}/logs/web.log 2>&1 &
 WEB_PID=$!
 echo $WEB_PID > ${WEB_DIR}/web.pid
 
+echo -e "${YELLOW}等待服务启动...${PLAIN}"
 sleep 3
 
 # 检查服务状态
@@ -220,41 +224,69 @@ if ps -p $WEB_PID > /dev/null 2>&1; then
     echo -e "${GREEN}✓${PLAIN} Web服务已启动 (PID: $WEB_PID)"
 else
     echo -e "${RED}✗${PLAIN} Web服务启动失败"
-    echo -e "${YELLOW}查看日志: ${PLAIN}tail -f ${WEB_DIR}/logs/web.log"
+    echo ""
+    echo -e "${YELLOW}查看日志:${PLAIN}"
+    tail -n 20 ${WEB_DIR}/logs/web.log
     exit 1
 fi
 
 # 创建启动脚本
-cat > ${HOME}/start-proxy-web.sh << 'STARTEOF'
+cat > ${HOME}/start-proxy-web.sh << STARTEOF
 #!/bin/bash
-# Proxy Manager Web 启动脚本
+# Proxy Manager Web 快速启动脚本
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 
 # 检测OS
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    WEB_DIR="$HOME/.proxy-manager"
+if [[ "\$OSTYPE" == "darwin"* ]]; then
+    CONFIG_DIR="\$HOME/.proxy-manager"
+    WEB_DIR="\$HOME/.proxy-manager"
 else
+    CONFIG_DIR="/etc/proxy-manager"
     WEB_DIR="/var/www/proxy-manager"
 fi
 
-# 停止已存在的服务
-if [[ -f "${WEB_DIR}/web.pid" ]]; then
-    OLD_PID=$(cat ${WEB_DIR}/web.pid)
-    if ps -p $OLD_PID > /dev/null 2>&1; then
-        kill $OLD_PID 2>/dev/null
-        echo "已停止旧服务 (PID: $OLD_PID)"
+# 停止旧服务
+if [[ -f "\${WEB_DIR}/web.pid" ]]; then
+    OLD_PID=\$(cat \${WEB_DIR}/web.pid 2>/dev/null)
+    if [[ -n "\$OLD_PID" ]] && ps -p \$OLD_PID > /dev/null 2>&1; then
+        echo "停止旧服务 (PID: \$OLD_PID)"
+        kill \$OLD_PID 2>/dev/null
     fi
 fi
 
-# 启动服务
-cd ${WEB_DIR}
-nohup python3 ${WEB_DIR}/proxy_web.py > ${WEB_DIR}/logs/web.log 2>&1 &
-WEB_PID=$!
-echo $WEB_PID > ${WEB_DIR}/web.pid
+# 清理残留进程
+pkill -f "proxy_web.py" 2>/dev/null || true
+sleep 1
 
-echo "Proxy Manager Web 已启动 (PID: $WEB_PID)"
-echo "管理地址: http://127.0.0.1:5080"
+# 找到proxy_web.py
+if [[ -f "\${SCRIPT_DIR}/proxy-manager-src/proxy_web.py" ]]; then
+    WEB_PY="\${SCRIPT_DIR}/proxy-manager-src/proxy_web.py"
+elif [[ -f "\${WEB_DIR}/proxy_web.py" ]]; then
+    WEB_PY="\${WEB_DIR}/proxy_web.py"
+else
+    echo "错误: 找不到 proxy_web.py"
+    exit 1
+fi
+
+# 创建日志目录
+mkdir -p \${WEB_DIR}/logs
+
+# 启动服务
+cd \$(dirname \$WEB_PY)
+nohup python3 \$WEB_PY > \${WEB_DIR}/logs/web.log 2>&1 &
+WEB_PID=\$!
+echo \$WEB_PID > \${WEB_DIR}/web.pid
+
+sleep 2
+
+if ps -p \$WEB_PID > /dev/null 2>&1; then
+    echo "Proxy Manager Web 已启动 (PID: \$WEB_PID)"
+    echo "管理地址: http://127.0.0.1:5080"
+else
+    echo "启动失败，查看日志: \${WEB_DIR}/logs/web.log"
+    exit 1
+fi
 STARTEOF
 
 chmod +x ${HOME}/start-proxy-web.sh
@@ -283,10 +315,10 @@ http://127.0.0.1:${WEB_PORT}
 http://${SERVER_IP}:${WEB_PORT}
 
 【🚀 快速启动】
-运行: ${HOME}/start-proxy-web.sh
+bash ${HOME}/start-proxy-web.sh
 
 【📊 用户管理】
-查看用户: python3 ${CONFIG_DIR}/proxy_manager.py list
+python3 ${CONFIG_DIR}/proxy_manager.py list
 
 【📝 查看日志】
 tail -f ${WEB_DIR}/logs/web.log
@@ -295,7 +327,7 @@ tail -f ${WEB_DIR}/logs/web.log
 kill $(cat ${WEB_DIR}/web.pid)
 INFOEOF
 
-echo -e "${GREEN}✓${PLAIN} 安装信息已保存到: ${CONFIG_DIR}/install_info.txt"
+echo -e "${GREEN}✓${PLAIN} 安装信息已保存"
 
 # 显示完成信息
 echo ""
