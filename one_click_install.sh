@@ -121,6 +121,7 @@ USER_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || python3 -c "import u
 USER_PASS=$(openssl rand -base64 16 | tr -d '=+/' | cut -c1-16)
 
 # 创建用户数据库
+TIMESTAMP=$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)
 cat > ${CONFIG_DIR}/users.json << EOF
 {
     "users": [
@@ -131,12 +132,12 @@ cat > ${CONFIG_DIR}/users.json << EOF
             "traffic_limit": 0,
             "traffic_used": 0,
             "enabled": true,
-            "created_at": "$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)",
+            "created_at": "${TIMESTAMP}",
             "last_active": null
         }
     ],
     "admin_password": "${ADMIN_PASS}",
-    "port": ${PROXY_PORT},
+    "port": ${VLESS_PORT},
     "domain": "${SERVER_IP}"
 }
 EOF
