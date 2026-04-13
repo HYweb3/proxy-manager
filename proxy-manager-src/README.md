@@ -14,7 +14,7 @@
 
 ## ✨ 功能特性
 
-- ✅ **多协议支持**: VLESS, VMESS, Trojan, Shadowsocks, Shadowrocket
+- ✅ **多协议支持**: VLESS (443), Trojan (501), VMess (502), Shadowsocks (503)
 - ✅ **多用户管理**: 独立账号、独立流量统计
 - ✅ **Web管理界面**: 简洁美观的操作面板
 - ✅ **二维码分享**: 扫码即用，支持多种客户端
@@ -36,27 +36,27 @@
 
 ## 🚀 快速开始
 
-### 方法一：完整版一键安装（推荐）⭐
+### 一键安装（推荐）⭐
 
 ```bash
-sudo bash quick_install.sh
+bash <(curl -Ls https://raw.githubusercontent.com/HYweb3/proxy-manager/main/one_click_install.sh)
 ```
 
 **完整功能包括：**
 - ✅ 自动创建不限流量默认用户
-- ✅ 安装后直接显示所有代理连接配置
+- ✅ 安装后直接显示所有代理连接配置（4种协议）
 - ✅ 自动生成二维码（终端支持时）
 - ✅ 完整的卸载脚本
 
-### 方法二：简化自动安装
+### 更新现有安装
+
+如果您已安装旧版本，运行更新脚本：
 
 ```bash
-wget -N --no-check-certificate https://raw.githubusercontent.com/hnbwww/proxy-manager/master/auto_install.sh
-chmod +x auto_install.sh
-sudo bash auto_install.sh
+bash <(curl -Ls https://raw.githubusercontent.com/HYweb3/proxy-manager/main/update_multi_protocol.sh)
 ```
 
-### 方法二：手动安装
+### 手动安装
 
 详细的安装步骤请参考 [部署文档](DEPLOY.md)
 
@@ -78,14 +78,37 @@ sudo ./install.sh
 
 ## 📖 使用说明
 
+### 支持的协议
+
+| 协议 | 端口 | 加密 | URL 格式 |
+|------|------|------|----------|
+| **VLESS** | 443 | TLS | `vless://uuid@server:443?encryption=none&security=tls&type=tcp` |
+| **Trojan** | 501 | TLS | `trojan://password@server:501?security=tls&type=tcp` |
+| **VMess** | 502 | TLS | `vmess://base64config` |
+| **Shadowsocks** | 503 | 无 | `ss://aes-256-gcm:password@server:503` |
+
+### 防火墙配置
+
+需要在云服务商安全组开放以下端口：
+- **443/tcp** (VLESS - TLS加密)
+- **501/tcp** (Trojan - TLS加密)
+- **502/tcp** (VMess - TLS加密)
+- **503/tcp** (Shadowsocks - 无加密)
+- **503/udp** (Shadowsocks - UDP支持)
+- **5080/tcp** (Web管理界面)
+
 ### Web管理面板
 
-安装完成后访问：`http://你的服务器IP:8081`
+安装完成后访问：`http://你的服务器IP:5080`
 
 ```
 管理员密码: 在安装时生成，保存在 /etc/proxy-manager/users.json
 查看密码: sudo cat /etc/proxy-manager/users.json | grep admin_password
 ```
+
+**重要**: 由于使用自签名证书，客户端需要：
+- 勾选 "允许不安全" 或
+- 设置 `skip-cert-verify: true`
 
 ### 命令行管理
 
@@ -141,10 +164,17 @@ Web面板 → 查看用户配置 → 显示二维码/复制链接
 ## 🔧 常用命令
 
 ```bash
+# 查看安装信息
+cat /etc/proxy-manager/install_info.txt
+
+# 查看当前配置
+cat /etc/proxy-manager/config.json
+
 # 服务管理
 sudo systemctl start xray          # 启动代理服务
 sudo systemctl start proxy-web     # 启动Web服务
 sudo systemctl restart xray         # 重启代理服务
+sudo systemctl status xray          # 查看代理服务状态
 sudo systemctl status proxy-web     # 查看Web服务状态
 
 # 用户管理
@@ -155,6 +185,25 @@ python3 /etc/proxy-manager/proxy_manager.py delete 用户名       # 删除用�
 # 日志查看
 sudo tail -f /var/log/xray/access.log    # 访问日志
 sudo journalctl -u xray -f                # 系统日志
+
+# 检查监听端口
+netstat -tuln | grep -E ':(443|501|502|503|5080)'
+```
+
+### 生成二维码
+
+```bash
+# VLESS 二维码
+qrencode -t ANSIUTF8 'vless://uuid@server:443?...'
+
+# Trojan 二维码
+qrencode -t ANSIUTF8 'trojan://password@server:501?...'
+
+# VMess 二维码
+qrencode -t ANSIUTF8 'vmess://base64config'
+
+# Shadowsocks 二维码
+qrencode -t ANSIUTF8 'ss://aes-256-gcm:password@server:503'
 ```
 
 ## 🛡️ 安全建议
@@ -184,8 +233,7 @@ sudo journalctl -u xray -f                # 系统日志
 
 ```bash
 # 检查端口占用
-sudo ss -tlnp | grep 500
-sudo ss -tlnp | grep 5080
+sudo ss -tlnp | grep -E ':(443|501|502|503|5080)'
 
 # 检查配置文件
 /usr/local/bin/xray -test -config /etc/proxy-manager/config.json
@@ -209,7 +257,7 @@ pip3 install flask flask-qrcode qrcode pillow pyyaml
 - **Python版本**: Python 3.6+
 - **权限**: Root权限
 - **内存**: 最低512MB，推荐1GB+
-- **网络**: 开放端口 500-503 (代理), 5080 (Web管理)
+- **网络**: 开放端口 443, 501, 502, 503 (代理), 5080 (Web管理)
 
 ## 📚 文档
 
