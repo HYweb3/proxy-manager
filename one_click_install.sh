@@ -429,7 +429,6 @@ if [[ "${WEB_INSTALLED}" == "true" ]]; then
 else
     echo -e "   Web管理界面:   ${YELLOW}- 未安装${PLAIN}"
 fi
-fi
 
 # 显示安装信息
 echo ""
