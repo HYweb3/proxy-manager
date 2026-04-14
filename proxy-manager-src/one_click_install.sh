@@ -111,6 +111,8 @@ if [[ "$IS_MACOS" == "true" ]]; then
 else
     # Linux依赖安装
     if [[ "${release}" == "centos" ]]; then
+        # 先安装EPEL仓库（CentOS需要）
+        ${systemPackage} install -y epel-release 2>/dev/null || true
         ${systemPackage} install -y curl wget unzip qrencode python3 python3-pip openssl python3-devel 2>/dev/null
         ${systemPackage} install -y gcc gcc-c++ make 2>/dev/null || true
     else
@@ -167,7 +169,16 @@ install_python_packages() {
     # 方法4: 使用系统包管理器（CentOS/RHEL）
     if [[ "$installed" == "false" ]] && [[ "${release}" == "centos" ]]; then
         echo "  尝试使用 yum/dnf 安装 Python 包..."
+        # 先安装EPEL仓库
+        ${systemPackage} install -y epel-release 2>/dev/null || true
+        # 尝试安装系统Python包
         ${systemPackage} install -y python3-flask python3-qrcode python3-pillow python3-pyyaml python3-cryptography 2>/dev/null && installed=true
+
+        # 如果系统包失败，使用pip with --user
+        if [[ "$installed" == "false" ]] && command -v python3 &>/dev/null; then
+            echo "  尝试使用 python3 -m pip --user 安装..."
+            python3 -m pip install --user -q $packages 2>/dev/null && installed=true
+        fi
     fi
 
     if [[ "$installed" == "true" ]]; then
@@ -338,12 +349,60 @@ if [[ "$USE_XRAY" == "true" ]] && [[ -f "${CONFIG_DIR}/proxy_manager.py" ]]; the
     echo ""
     echo -e "${BLUE}[6/9]${PLAIN} 生成 XRay 配置..."
     echo -e "${YELLOW}正在生成 XRay 配置文件...${PLAIN}"
-    PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null || true
 
-    if [[ -f "${CONFIG_DIR}/config.json" ]]; then
-        echo -e "${GREEN}✓${PLAIN} XRay配置文件生成完成"
+    # 首先尝试使用proxy_manager.py生成配置
+    if [[ -f "${CONFIG_DIR}/proxy_manager.py" ]]; then
+        PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null
+    fi
+
+    # 检查XRay配置是否生成成功，如果失败则创建基础配置
+    if [[ ! -f "${CONFIG_DIR}/config.json" ]]; then
+        echo -e "${YELLOW}⚠ proxy_manager.py生成配置失败，创建基础XRay配置...${PLAIN}"
+
+        # 创建基础XRay配置
+        cat > ${CONFIG_DIR}/config.json << EOF
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${USER_UUID}",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "${CONFIG_DIR}/server.crt",
+              "keyFile": "${CONFIG_DIR}/server.key"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
+}
+EOF
+        echo -e "${GREEN}✓${PLAIN} 基础XRay配置创建完成"
     else
-        echo -e "${YELLOW}⚠ XRay配置文件生成失败，继续安装...${PLAIN}"
+        echo -e "${GREEN}✓${PLAIN} XRay配置文件生成完成"
     fi
 else
     echo ""
