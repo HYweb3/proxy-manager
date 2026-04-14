@@ -396,6 +396,48 @@ def get_user_config(username):
         return jsonify({'error': f'服务器错误: {str(e)}'}), 500
 
 
+@app.route('/api/admin/user/<username>/config')
+def admin_get_user_config(username):
+    """管理员获取用户配置（需要管理员登录，无需用户密码）"""
+    try:
+        # 检查管理员是否登录
+        if 'logged_in' not in session:
+            print("[API] 管理员未登录")
+            return jsonify({'error': '未登录'}), 401
+
+        print(f"[API] 管理员获取用户配置请求: username={username}")
+
+        user = manager.get_user(username)
+        if not user:
+            print(f"[API] 用户不存在: {username}")
+            return jsonify({'error': '用户不存在'}), 404
+
+        print(f"[API] 找到用户: {user['username']}")
+        print("[API] 管理员权限验证通过，正在生成配置...")
+
+        # 生成各种配置链接
+        config = {
+            'username': user['username'],
+            'uuid': user['uuid'],
+            'vless': manager.generate_vless_url(user),
+            'vmess': manager.generate_vmess_url(user),
+            'trojan': manager.generate_trojan_url(user),
+            'ss': manager.generate_ss_url(user),
+            'clash': manager.generate_clash_config(user),
+            'shadowrocket': manager.generate_shadowrocket_config(user)
+        }
+
+        print(f"[API] 配置生成成功，协议数量: {len([k for k, v in config.items() if v and k not in ['username', 'uuid']])}")
+
+        return jsonify(config)
+
+    except Exception as e:
+        print(f"[API] 错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
+
+
 @app.route('/api/user/<username>/qrcode')
 def get_qrcode(username):
     """获取用户配置二维码"""
@@ -884,7 +926,17 @@ if __name__ == '__main__':
             transform: translateY(-2px);
             box-shadow: 0 8px 16px rgba(245, 101, 101, 0.3);
         }
-        .btn:not(.btn-primary):not(.btn-danger) {
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            background-size: 200% 200%;
+            color: white;
+        }
+        .btn-success:hover {
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(72, 187, 120, 0.3);
+        }
+        .btn:not(.btn-primary):not(.btn-danger):not(.btn-success) {
             background: #e2e8f0;
             color: #4a5568;
         }
@@ -1600,6 +1652,7 @@ if __name__ == '__main__':
                     <td data-label="状态"><span class="status-badge ${user.status === '启用' ? 'status-enabled' : 'status-disabled'}">${user.status}</span></td>
                     <td data-label="操作">
                         <button class="btn btn-primary" onclick="viewUserPage('${user.username}')">查看</button>
+                        <button class="btn btn-success" onclick="showConfigModal('${user.username}')">配置</button>
                         <button class="btn" onclick="resetUserPassword('${user.username}')">重置密码</button>
                         <button class="btn" onclick="toggleUser('${user.username}')">切换</button>
                         <button class="btn btn-danger" onclick="deleteUser('${user.username}')">删除</button>
@@ -1682,6 +1735,54 @@ if __name__ == '__main__':
             } catch (error) {
                 console.error('获取配置失败:', error);
                 const errorMsg = `获取配置失败: ${error.message}\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确`;
+                showMessage('获取配置失败', errorMsg, 'error');
+            }
+        }
+
+        // 管理员查看用户配置（无需密码）
+        async function showConfigModal(username) {
+            const user = currentUsers.find(u => u.username === username);
+            if (!user) {
+                showMessage('错误', '用户不存在', 'error');
+                return;
+            }
+
+            try {
+                console.log(`管理员正在获取用户 ${username} 的配置...`);
+
+                // 使用管理员权限获取配置
+                const res = await fetch(`/api/admin/user/${username}/config`);
+
+                console.log(`API响应状态: ${res.status}`);
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+
+                console.log('配置数据:', data);
+
+                if (data.error) {
+                    showMessage('错误', data.error, 'error');
+                    return;
+                }
+
+                if (!data.vless && !data.vmess && !data.trojan && !data.ss) {
+                    showMessage('警告', '配置数据为空，请联系管理员', 'warning');
+                    return;
+                }
+
+                currentConfig = data;
+                document.getElementById('modalTitle').textContent = `配置 - ${username}`;
+                showTab('vless');
+                document.getElementById('configModal').classList.add('active');
+
+                console.log('配置模态框已显示');
+
+            } catch (error) {
+                console.error('获取配置失败:', error);
+                const errorMsg = `获取配置失败: ${error.message}\n\n请检查:\n1. 网络连接\n2. 服务器状态`;
                 showMessage('获取配置失败', errorMsg, 'error');
             }
         }
