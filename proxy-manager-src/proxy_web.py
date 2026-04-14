@@ -6,15 +6,168 @@ Proxy Manager - Web管理界面
 提供扫码、复制链接、配置管理功能
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, send_file
-from flask_qrcode import QRcode
 import os
 import sys
+import subprocess
+
+def install_missing_modules(modules):
+    """自动安装缺失的 Python 模块，兼容 CentOS 和 Ubuntu"""
+    print("🔧 检测到缺失模块，尝试自动安装...", file=sys.stderr)
+
+    # 尝试使用 pip3 安装
+    try:
+        cmd = [sys.executable, '-m', 'pip', 'install', '-q'] + modules
+        result = subprocess.run(cmd, capture_output=True, timeout=300)
+        if result.returncode == 0:
+            print("✅ 模块安装成功", file=sys.stderr)
+            return True
+        else:
+            print(f"⚠️  pip安装失败: {result.stderr.decode()}", file=sys.stderr)
+    except Exception as e:
+        print(f"⚠️  pip安装异常: {e}", file=sys.stderr)
+
+    # 尝试使用系统包管理器
+    try:
+        # 检测系统类型
+        if os.path.exists('/etc/debian_version'):
+            # Debian/Ubuntu 系统
+            print("尝试使用 apt 安装...", file=sys.stderr)
+            packages = []
+            for module in modules:
+                if module == 'flask':
+                    packages.append('python3-flask')
+                elif module == 'pillow':
+                    packages.append('python3-pil')
+                elif module == 'qrcode':
+                    packages.append('python3-qrcode')
+                elif module == 'pyyaml':
+                    packages.append('python3-yaml')
+                elif module == 'flask-qrcode':
+                    # flask-qrcode 通常不在系统仓库中，跳过
+                    pass
+
+            if packages:
+                cmd = ['apt-get', 'install', '-y'] + packages
+                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                if result.returncode == 0:
+                    print("✅ 系统包安装成功", file=sys.stderr)
+                    return True
+        elif os.path.exists('/etc/redhat-release'):
+            # RedHat/CentOS 系统
+            print("尝试使用 yum 安装...", file=sys.stderr)
+            packages = []
+            for module in modules:
+                if module == 'flask':
+                    packages.append('python3-flask')
+                elif module == 'pillow':
+                    packages.append('python3-pillow')
+                elif module == 'qrcode':
+                    packages.append('python3-qrcode')
+                elif module == 'flask-qrcode':
+                    # flask-qrcode 通常不在系统仓库中，跳过
+                    pass
+
+            if packages:
+                cmd = ['yum', 'install', '-y'] + packages
+                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                if result.returncode == 0:
+                    print("✅ 系统包安装成功", file=sys.stderr)
+                    return True
+    except Exception as e:
+        print(f"⚠️  系统包安装异常: {e}", file=sys.stderr)
+
+    return False
+
+def check_and_import_modules():
+    """检查并导入必需的模块，如果缺失则尝试安装"""
+    missing_modules = []
+
+    # 第一轮检查：找出缺失的模块
+    try:
+        from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+    except ImportError:
+        missing_modules.append('flask')
+
+    try:
+        from flask_qrcode import QRcode
+    except ImportError:
+        missing_modules.append('flask-qrcode')
+
+    try:
+        from PIL import Image
+    except ImportError:
+        missing_modules.append('pillow')
+
+    try:
+        import qrcode
+    except ImportError:
+        missing_modules.append('qrcode')
+
+    try:
+        import yaml
+    except ImportError:
+        missing_modules.append('pyyaml')
+
+    # 如果有缺失模块，尝试安装
+    if missing_modules:
+        print(f"缺失模块: {', '.join(missing_modules)}", file=sys.stderr)
+        if install_missing_modules(missing_modules):
+            # 安装成功，重新导入
+            import importlib
+            for module in missing_modules:
+                try:
+                    importlib.import_module(module.replace('-', '_'))
+                except ImportError:
+                    pass
+
+        # 第二轮检查：验证是否都可用
+        still_missing = []
+        try:
+            from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+            from flask_qrcode import QRcode
+            from PIL import Image
+            import qrcode
+            import yaml
+        except ImportError as e:
+            still_missing.append(str(e))
+
+        if still_missing:
+            print("=" * 60, file=sys.stderr)
+            print("❌ 错误: 无法自动安装所有必需的 Python 模块", file=sys.stderr)
+            print("=" * 60, file=sys.stderr)
+            print("请手动安装以下模块:", file=sys.stderr)
+            for module in missing_modules:
+                print(f"  - {module}", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("安装命令:", file=sys.stderr)
+            print(f"  pip3 install " + " ".join(missing_modules), file=sys.stderr)
+            print("", file=sys.stderr)
+            print("或者使用系统包管理器:", file=sys.stderr)
+            print("  Ubuntu/Debian: sudo apt-get update && sudo apt-get install -y python3-flask python3-qrcode python3-pil python3-yaml", file=sys.stderr)
+            print("  CentOS/RHEL:   sudo yum install -y python3-flask python3-qrcode python3-pillow", file=sys.stderr)
+            print("", file=sys.stderr)
+            print("注意: flask-qrcode 需要通过 pip 安装:", file=sys.stderr)
+            print("  pip3 install flask-qrcode", file=sys.stderr)
+            print("=" * 60, file=sys.stderr)
+            sys.exit(1)
+
+    # 成功导入所有模块
+    from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+    from flask_qrcode import QRcode
+    from PIL import Image
+    import qrcode
+    import yaml
+    import json
+    import io
+    import base64
+
+    return Flask, render_template, request, jsonify, session, redirect, send_file, QRcode, qrcode
+
+# 导入所有必需模块
+Flask, render_template, request, jsonify, session, redirect, send_file, QRcode, qrcode = check_and_import_modules()
 import json
 import io
 import base64
-from PIL import Image
-import qrcode
 
 # 添加配置管理器路径
 CONFIG_PATH = os.path.expanduser('~/.proxy-manager')
@@ -1153,9 +1306,6 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
         f.write(index_html)
     with open(f'{template_dir}/user_config.html', 'w', encoding='utf-8') as f:
         f.write(user_config_html)
-
-    # 安装 Flask-QRCode
-    os.system('pip3 install flask flask-qrcode pyyaml 2>/dev/null')
 
     # 从配置文件读取Web端口
     web_port = 5080  # 默认端口
