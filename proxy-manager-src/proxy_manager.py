@@ -395,6 +395,7 @@ class ProxyManager:
         # 重置密码
         user['password'] = new_password
         self.save_data()
+        self.update_xray_config()  # 立即更新XRay配置，使新密码生效
         return True, "密码重置成功"
 
     def set_user_password(self, username, new_password):
@@ -405,6 +406,7 @@ class ProxyManager:
 
         user['password'] = new_password
         self.save_data()
+        self.update_xray_config()  # 立即更新XRay配置，使新密码生效
         return True, "密码设置成功"
 
 

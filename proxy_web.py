@@ -1190,6 +1190,214 @@ if __name__ == '__main__':
         .message-modal-copy-btn:hover {
             background: #218838;
         }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+            }
+
+            .card {
+                padding: 20px 15px;
+                border-radius: 15px;
+                margin-bottom: 15px;
+            }
+
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+
+            /* 表格响应式设计 */
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+                border-radius: 10px;
+            }
+
+            thead {
+                display: none; /* 移动端隐藏表头 */
+            }
+
+            tbody tr {
+                display: block;
+                margin-bottom: 20px;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                background: white;
+                padding: 15px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            }
+
+            tbody tr:last-child {
+                margin-bottom: 0;
+            }
+
+            td {
+                display: block;
+                text-align: left;
+                padding: 8px 0;
+                border: none;
+                position: relative;
+                padding-left: 50%; /* 为标签留出空间 */
+            }
+
+            td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-right: 10px;
+                font-weight: 600;
+                font-size: 13px;
+                color: #6b7280;
+                text-align: left;
+            }
+
+            /* 第一列：用户名 */
+            td:first-child {
+                font-size: 18px;
+                font-weight: 700;
+                color: #1f2937;
+                margin-bottom: 12px;
+                padding-left: 0;
+                border-bottom: 2px solid #f3f4f6;
+                padding-bottom: 12px;
+            }
+
+            td:first-child::before {
+                content: "👤 ";
+                margin-right: 5px;
+            }
+
+            /* 最后一列：操作按钮 */
+            td:last-child {
+                padding-left: 0;
+                padding-top: 15px;
+                border-top: 2px solid #f3f4f6;
+                margin-top: 12px;
+            }
+
+            td:last-child::before {
+                content: "";
+                display: none;
+            }
+
+            /* 按钮组优化 */
+            td:last-child .btn {
+                display: block;
+                width: 100%;
+                margin: 8px 0;
+                padding: 14px 20px;
+                font-size: 15px;
+                text-align: center;
+            }
+
+            /* 状态徽章优化 */
+            .status-badge {
+                display: inline-block;
+                padding: 8px 16px;
+                font-size: 13px;
+                border-radius: 25px;
+            }
+
+            /* 添加用户表单优化 */
+            .add-user-form {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .form-group label {
+                font-size: 13px;
+                margin-bottom: 6px;
+            }
+
+            .form-group input {
+                padding: 14px 16px;
+                font-size: 16px;
+            }
+
+            /* 按钮优化 */
+            .btn {
+                padding: 14px 20px;
+                font-size: 15px;
+                min-height: 48px; /* 符合移动端触摸目标最小尺寸 */
+            }
+
+            /* 模态框优化 */
+            .message-modal-content {
+                width: 95%;
+                max-width: 95%;
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .config-modal .modal-content {
+                width: 95%;
+                max-width: 95%;
+                padding: 20px;
+                margin: 10px;
+            }
+
+            /* 标签优化 */
+            .config-tab {
+                padding: 12px 16px;
+                font-size: 14px;
+                min-height: 48px;
+            }
+
+            /* 二维码容器优化 */
+            .qrcode-container {
+                padding: 15px;
+                border-radius: 12px;
+            }
+
+            /* 配置URL框优化 */
+            .config-url {
+                font-size: 11px;
+                word-break: break-all;
+            }
+        }
+
+        /* 平板优化 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                max-width: 100%;
+            }
+
+            table {
+                font-size: 14px;
+            }
+
+            th, td {
+                padding: 12px 8px;
+            }
+
+            .btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1386,18 +1594,23 @@ if __name__ == '__main__':
             const tbody = document.getElementById('userTable');
             tbody.innerHTML = currentUsers.map(user => `
                 <tr>
-                    <td><strong>${user.username}</strong></td>
-                    <td style="font-family: monospace; font-size: 12px;">${user.uuid.substring(0, 8)}...</td>
-                    <td>${user.traffic}</td>
-                    <td><span class="status-badge ${user.status === '启用' ? 'status-enabled' : 'status-disabled'}">${user.status}</span></td>
-                    <td>
-                        <button class="btn btn-primary" onclick="showConfig('${user.username}')">配置</button>
+                    <td data-label="用户名"><strong>${user.username}</strong></td>
+                    <td data-label="UUID" style="font-family: monospace; font-size: 12px;">${user.uuid.substring(0, 8)}...</td>
+                    <td data-label="流量使用">${user.traffic}</td>
+                    <td data-label="状态"><span class="status-badge ${user.status === '启用' ? 'status-enabled' : 'status-disabled'}">${user.status}</span></td>
+                    <td data-label="操作">
+                        <button class="btn btn-primary" onclick="viewUserPage('${user.username}')">查看</button>
                         <button class="btn" onclick="resetUserPassword('${user.username}')">重置密码</button>
                         <button class="btn" onclick="toggleUser('${user.username}')">切换</button>
                         <button class="btn btn-danger" onclick="deleteUser('${user.username}')">删除</button>
                     </td>
                 </tr>
             `).join('');
+        }
+
+        // 新增：跳转到用户页面
+        function viewUserPage(username) {
+            window.open('/user/' + username, '_blank');
         }
 
         document.getElementById('addUserForm').addEventListener('submit', async (e) => {
