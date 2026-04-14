@@ -349,12 +349,60 @@ if [[ "$USE_XRAY" == "true" ]] && [[ -f "${CONFIG_DIR}/proxy_manager.py" ]]; the
     echo ""
     echo -e "${BLUE}[6/9]${PLAIN} 生成 XRay 配置..."
     echo -e "${YELLOW}正在生成 XRay 配置文件...${PLAIN}"
-    PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null || true
 
-    if [[ -f "${CONFIG_DIR}/config.json" ]]; then
-        echo -e "${GREEN}✓${PLAIN} XRay配置文件生成完成"
+    # 首先尝试使用proxy_manager.py生成配置
+    if [[ -f "${CONFIG_DIR}/proxy_manager.py" ]]; then
+        PYTHONIOENCODING=utf-8 python3 ${CONFIG_DIR}/proxy_manager.py update_config 2>/dev/null
+    fi
+
+    # 检查XRay配置是否生成成功，如果失败则创建基础配置
+    if [[ ! -f "${CONFIG_DIR}/config.json" ]]; then
+        echo -e "${YELLOW}⚠ proxy_manager.py生成配置失败，创建基础XRay配置...${PLAIN}"
+
+        # 创建基础XRay配置
+        cat > ${CONFIG_DIR}/config.json << EOF
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "inbounds": [
+    {
+      "port": 443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${USER_UUID}",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "tls",
+        "tlsSettings": {
+          "certificates": [
+            {
+              "certificateFile": "${CONFIG_DIR}/server.crt",
+              "keyFile": "${CONFIG_DIR}/server.key"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    }
+  ]
+}
+EOF
+        echo -e "${GREEN}✓${PLAIN} 基础XRay配置创建完成"
     else
-        echo -e "${YELLOW}⚠ XRay配置文件生成失败，继续安装...${PLAIN}"
+        echo -e "${GREEN}✓${PLAIN} XRay配置文件生成完成"
     fi
 else
     echo ""
