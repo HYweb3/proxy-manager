@@ -6,25 +6,72 @@ Proxy Manager - Web管理界面
 提供扫码、复制链接、配置管理功能
 """
 
-from flask import Flask, render_template, request, jsonify, session, redirect, send_file
-from flask_qrcode import QRcode
-import os
 import sys
+import os
+
+# 检查必需的 Python 模块
+missing_modules = []
+
+try:
+    from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+except ImportError:
+    missing_modules.append('flask')
+
+try:
+    from flask_qrcode import QRcode
+except ImportError:
+    missing_modules.append('flask-qrcode')
+
+try:
+    from PIL import Image
+except ImportError:
+    missing_modules.append('pillow')
+
+try:
+    import qrcode
+except ImportError:
+    missing_modules.append('qrcode')
+
 import json
 import io
 import base64
-from PIL import Image
-import qrcode
+
+# 如果缺少必需模块，输出错误信息并退出
+if missing_modules:
+    print("=" * 60, file=sys.stderr)
+    print("错误: 缺少必需的 Python 模块", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    print("请安装以下模块:", file=sys.stderr)
+    for module in missing_modules:
+        print(f"  - {module}", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("安装命令:", file=sys.stderr)
+    print("  pip3 install " + " ".join(missing_modules), file=sys.stderr)
+    print("", file=sys.stderr)
+    print("或者使用系统包管理器:", file=sys.stderr)
+    print("  Ubuntu/Debian: sudo apt-get install python3-flask python3-qrcode python3-pil", file=sys.stderr)
+    print("  CentOS/RHEL:   sudo yum install python3-flask python3-qrcode python3-pillow", file=sys.stderr)
+    print("=" * 60, file=sys.stderr)
+    sys.exit(1)
 
 # 添加配置管理器路径
 sys.path.insert(0, '/etc/proxy-manager')
-from proxy_manager import ProxyManager
+try:
+    from proxy_manager import ProxyManager
+except ImportError:
+    print("错误: 找不到 proxy_manager 模块", file=sys.stderr)
+    print("请确保 /etc/proxy-manager/proxy_manager.py 文件存在", file=sys.stderr)
+    sys.exit(1)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 QRcode(app)
 
-manager = ProxyManager()
+try:
+    manager = ProxyManager()
+except Exception as e:
+    print(f"错误: 无法初始化 ProxyManager: {e}", file=sys.stderr)
+    sys.exit(1)
 
 
 @app.route('/')

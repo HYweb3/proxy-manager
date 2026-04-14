@@ -63,23 +63,90 @@ echo -e "${GREEN}✓${PLAIN} 系统检测: ${BOLD}${release}${PLAIN}"
 # 获取脚本目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# 步骤1: 安装依赖
+# 步骤1: 安装系统依赖
 echo ""
 echo -e "${BLUE}[1/8]${PLAIN} 安装系统依赖..."
 if [[ "${release}" == "centos" ]]; then
-    ${systemPackage} install -y curl wget unzip qrencode python3 python3-pip openssl 2>/dev/null
+    ${systemPackage} install -y curl wget unzip qrencode python3 python3-pip openssl python3-devel 2>/dev/null
+    # CentOS 额外安装 EPEL 和开发包
+    ${systemPackage} install -y gcc gcc-c++ make 2>/dev/null || true
 else
     apt-get update -qq
-    apt-get install -y curl wget unzip qrencode python3 python3-pip openssl 2>/dev/null
+    apt-get install -y curl wget unzip qrencode python3 python3-pip openssl python3-dev 2>/dev/null
+    # Ubuntu 额外安装构建工具
+    apt-get install -y build-essential 2>/dev/null || true
 fi
 echo -e "${GREEN}✓${PLAIN} 系统依赖安装完成"
 
 # 步骤2: 安装Python依赖
 echo ""
 echo -e "${BLUE}[2/8]${PLAIN} 安装Python依赖..."
-pip3 install -q flask flask-qrcode qrcode pillow pyyaml cryptography 2>/dev/null || \
-pip3 install -q flask flask-qrcode qrcode pillow pyyaml cryptography --break-system-packages 2>/dev/null
-echo -e "${GREEN}✓${PLAIN} Python依赖安装完成"
+
+# 定义要安装的 Python 包
+PYTHON_PACKAGES="flask flask-qrcode qrcode pillow pyyaml cryptography"
+
+# 函数：尝试使用不同的方式安装 Python 包
+install_python_packages() {
+    local packages="$1"
+    local installed=false
+
+    # 方法1: 使用 pip3
+    if command -v pip3 &>/dev/null; then
+        echo "  尝试使用 pip3 安装..."
+        if pip3 install -q $packages 2>/dev/null; then
+            installed=true
+        elif pip3 install -q $packages --break-system-packages 2>/dev/null; then
+            installed=true
+        elif pip3 install -q $packages --user 2>/dev/null; then
+            installed=true
+        fi
+    fi
+
+    # 方法2: 使用 python3 -m pip
+    if [[ "$installed" == "false" ]] && python3 -m pip --version &>/dev/null; then
+        echo "  尝试使用 python3 -m pip 安装..."
+        if python3 -m pip install -q $packages 2>/dev/null; then
+            installed=true
+        elif python3 -m pip install -q $packages --break-system-packages 2>/dev/null; then
+            installed=true
+        elif python3 -m pip install -q $packages --user 2>/dev/null; then
+            installed=true
+        fi
+    fi
+
+    # 方法3: 使用系统包管理器（Ubuntu/Debian）
+    if [[ "$installed" == "false" ]] && [[ "${release}" == "debian" ]]; then
+        echo "  尝试使用 apt 安装 Python 包..."
+        apt-get install -y python3-flask python3-qrcode python3-pil python3-yaml python3-cryptography 2>/dev/null && installed=true
+    fi
+
+    # 方法4: 使用系统包管理器（CentOS/RHEL）
+    if [[ "$installed" == "false" ]] && [[ "${release}" == "centos" ]]; then
+        echo "  尝试使用 yum/dnf 安装 Python 包..."
+        ${systemPackage} install -y python3-flask python3-qrcode python3-pillow python3-pyyaml python3-cryptography 2>/dev/null && installed=true
+    fi
+
+    if [[ "$installed" == "true" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# 安装 Python 包
+if install_python_packages "$PYTHON_PACKAGES"; then
+    echo -e "${GREEN}✓${PLAIN} Python依赖安装完成"
+else
+    echo -e "${RED}✗${PLAIN} Python依赖安装失败，尝试手动安装..."
+    echo "  请运行: pip3 install flask flask-qrcode qrcode pillow pyyaml cryptography"
+    # 继续安装，但不阻止流程
+fi
+
+# 验证关键模块
+echo "  验证 Python 模块..."
+python3 -c "import flask" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} flask" || echo -e "    ${YELLOW}⚠${PLAIN} flask 未安装"
+python3 -c "import qrcode" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} qrcode" || echo -e "    ${YELLOW}⚠${PLAIN} qrcode 未安装"
+python3 -c "from PIL import Image" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} pillow" || echo -e "    ${YELLOW}⚠${PLAIN} pillow 未安装"
 
 # 步骤3: 安装XRay-core
 echo ""

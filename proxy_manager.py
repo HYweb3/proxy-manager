@@ -340,7 +340,11 @@ class ProxyManager:
                 "MATCH,Proxy"
             ]
         }
-        return yaml.dump(config) if hasattr(yaml, 'dump') else json.dumps(config, indent=2)
+        # 优先使用 yaml 格式，如果不可用则使用 json
+        if yaml is not None and hasattr(yaml, 'dump'):
+            return yaml.dump(config)
+        else:
+            return json.dumps(config, indent=2)
 
     def generate_shadowrocket_config(self, user):
         """生成ShadowRocket配置 - Shadowrocket支持VLESS链接"""
