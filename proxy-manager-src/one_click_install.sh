@@ -93,6 +93,35 @@ if [[ "$IS_MACOS" == "false" ]]; then
 fi
 
 # ============================================
+# 端口检测函数
+# ============================================
+check_port() {
+    local port=$1
+    if command -v netstat &>/dev/null; then
+        netstat -tuln | grep -q ":${port} " && return 0 || return 1
+    elif command -v ss &>/dev/null; then
+        ss -tuln | grep -q ":${port} " && return 0 || return 1
+    else
+        # 备用方法：尝试连接端口
+        timeout 1 bash -c "echo >/dev/tcp/localhost/${port}" 2>/dev/null && return 0 || return 1
+    fi
+}
+
+find_available_port() {
+    local start_port=$1
+    local max_attempts=10
+    for ((i=0; i<max_attempts; i++)); do
+        local port=$((start_port + i))
+        if ! check_port $port; then
+            echo $port
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
+# ============================================
 # 步骤1: 安装系统依赖
 # ============================================
 echo ""
@@ -589,6 +618,23 @@ fi
 # ============================================
 echo ""
 echo -e "${BLUE}[9/9]${PLAIN} 启动服务..."
+
+# 检查并调整Web端口
+echo ""
+echo -e "${CYAN}🔍 检查Web端口可用性...${PLAIN}"
+AVAILABLE_WEB_PORT=$(find_available_port $WEB_PORT)
+if [[ -z "$AVAILABLE_WEB_PORT" ]]; then
+    echo -e "${RED}❌ 无法找到可用端口 (已尝试 ${WEB_PORT}-$((WEB_PORT+10)))${PLAIN}"
+    echo -e "${YELLOW}💡 请手动检查并清理端口占用${PLAIN}"
+    exit 1
+fi
+
+if [[ "$AVAILABLE_WEB_PORT" != "$WEB_PORT" ]]; then
+    echo -e "${YELLOW}⚠️  端口 ${WEB_PORT} 被占用，使用端口 ${AVAILABLE_WEB_PORT}${PLAIN}"
+    WEB_PORT=$AVAILABLE_WEB_PORT
+else
+    echo -e "${GREEN}✅ 端口 ${WEB_PORT} 可用${PLAIN}"
+fi
 
 if [[ "$IS_MACOS" == "false" ]]; then
     # Linux系统启动

@@ -9,6 +9,25 @@ Proxy Manager - Web管理界面
 import os
 import sys
 import subprocess
+import socket
+
+def is_port_in_use(port):
+    """检查端口是否被占用"""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            result = s.connect_ex(('localhost', port))
+            return result == 0
+    except:
+        return False
+
+def find_available_port(start_port=5080, max_attempts=10):
+    """查找可用端口，从start_port开始，最多尝试max_attempts次"""
+    for attempt in range(max_attempts):
+        port = start_port + attempt
+        if not is_port_in_use(port):
+            return port, attempt  # 返回端口和尝试次数
+    return None, max_attempts  # 没有找到可用端口
 
 def install_missing_modules(modules):
     """自动安装缺失的 Python 模块，兼容 CentOS 和 Ubuntu"""
@@ -2358,8 +2377,50 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
     except:
         pass
 
+    # 检查端口是否可用，如果被占用则尝试下一个端口
+    print("🔍 检查端口可用性...")
+    available_port, attempts = find_available_port(web_port, 10)
+
+    if available_port is None:
+        print(f"❌ 无法找到可用端口 (已尝试 {web_port}-{web_port+10})")
+        print("💡 请检查是否有其他程序占用了这些端口")
+        sys.exit(1)
+
+    if attempts > 0:
+        print(f"⚠️  端口 {web_port} 被占用，使用端口 {available_port}")
+        web_port = available_port
+    else:
+        print(f"✅ 端口 {web_port} 可用")
+
+    # 保存实际使用的端口到配置文件
+    try:
+        config_file = os.path.join(CONFIG_PATH, 'actual_port.txt')
+        with open(config_file, 'w') as f:
+            f.write(str(web_port))
+    except:
+        pass
+
     # 启动服务器
     print("🚀 Proxy Manager Web界面启动中...")
+    print("=" * 50)
     print(f"📋 管理面板: http://0.0.0.0:{web_port}")
     print(f"🔐 用户配置: http://your-ip:{web_port}/user/username")
-    app.run(host='0.0.0.0', port=web_port, debug=False)
+    print("=" * 50)
+    print(f"🌐 本地访问: http://localhost:{web_port}")
+    print(f"📱 移动访问: http://your-ip:{web_port}")
+    print("=" * 50)
+    print("🎉 服务启动成功！按 Ctrl+C 停止服务")
+    print("=" * 50)
+
+    try:
+        app.run(host='0.0.0.0', port=web_port, debug=False)
+    except OSError as e:
+        if "already in use" in str(e) or "address already in use" in str(e):
+            print(f"❌ 端口 {web_port} 仍然被占用")
+            print("💡 尝试以下解决方案:")
+            print("   1. 检查并占用端口的程序: lsof -i :{}".format(web_port))
+            print("   2. 杀死占用端口的进程: kill -9 $(lsof -t -i :{})".format(web_port))
+            print("   3. 或者等待几秒后重新启动")
+        else:
+            print(f"❌ 启动失败: {e}")
+        sys.exit(1)
