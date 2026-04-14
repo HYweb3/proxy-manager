@@ -176,30 +176,33 @@ if os.path.exists('/etc/proxy-manager'):
 sys.path.insert(0, CONFIG_PATH)
 from proxy_manager import ProxyManager
 
-# 设置模板目录并确保模板文件存在
+# 设置模板目录
 template_dir = os.path.expanduser('~/.proxy-manager/templates')
 os.makedirs(template_dir, exist_ok=True)
 
+# 确保模板文件存在
 def ensure_templates_exist():
-    """确保所有必需的模板文件存在"""
+    """检查并创建必需的模板文件"""
     template_files = ['login.html', 'index.html', 'user_config.html']
-    for template_file in template_files:
-        template_path = os.path.join(template_dir, template_file)
-        if not os.path.exists(template_path):
-            return False
+    missing_templates = [f for f in template_files if not os.path.exists(os.path.join(template_dir, f))]
+
+    if missing_templates:
+        # 如果模板缺失，暂时返回False，稍后在__main__中创建
+        return False
     return True
 
-# 如果模板文件不存在，创建它们
-if not ensure_templates_exist():
-    # 简化的login.html模板
-    login_html = '''<!DOCTYPE html>
+# 先尝试创建模板（如果__main__部分没有运行的话）
+if not os.path.exists(os.path.join(template_dir, 'login.html')):
+    # 创建基础的login.html模板
+    basic_login_html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>代理管理 - 登录</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
         h1 { text-align: center; color: #333; margin-bottom: 30px; }
         .form-group { margin-bottom: 20px; }
@@ -227,8 +230,8 @@ if not ensure_templates_exist():
 </body>
 </html>'''
 
-    # 简化的index.html模板
-    index_html = '''<!DOCTYPE html>
+    # 创建基础的index.html模板
+    basic_index_html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -239,10 +242,6 @@ if not ensure_templates_exist():
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         h1 { color: #333; }
         .info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .user-list { margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #f8f9fa; }
     </style>
 </head>
 <body>
@@ -252,16 +251,13 @@ if not ensure_templates_exist():
             <p><strong>服务器:</strong> {{ domain }}</p>
             <p><strong>状态:</strong> 运行中</p>
         </div>
-        <div class="user-list">
-            <h2>用户列表</h2>
-            <p>用户管理功能正在开发中...</p>
-        </div>
+        <p>用户管理功能正在开发中...</p>
     </div>
 </body>
 </html>'''
 
-    # 简化的user_config.html模板
-    user_config_html = '''<!DOCTYPE html>
+    # 创建基础的user_config.html模板
+    basic_user_config_html = '''<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -271,28 +267,24 @@ if not ensure_templates_exist():
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
         h1 { color: #333; }
-        .config-info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>用户配置: {{ username }}</h1>
-        <div class="config-info">
-            <p><strong>服务器:</strong> {{ domain }}</p>
-            <p>配置信息正在加载中...</p>
-        </div>
+        <p><strong>服务器:</strong> {{ domain }}</p>
+        <p>配置信息正在加载中...</p>
     </div>
 </body>
 </html>'''
 
-    # 保存模板文件
-    with open(f'{template_dir}/login.html', 'w', encoding='utf-8') as f:
-        f.write(login_html)
-    with open(f'{template_dir}/index.html', 'w', encoding='utf-8') as f:
-        f.write(index_html)
-    with open(f'{template_dir}/user_config.html', 'w', encoding='utf-8') as f:
-        f.write(user_config_html)
+    # 保存基础模板
+    with open(os.path.join(template_dir, 'login.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_login_html)
+    with open(os.path.join(template_dir, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_index_html)
+    with open(os.path.join(template_dir, 'user_config.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_user_config_html)
 
 app = Flask(__name__, template_folder=template_dir)
 app.secret_key = os.urandom(24)
@@ -510,9 +502,1410 @@ def clash_config(username):
 
 
 if __name__ == '__main__':
-    # 模板已在模块导入时创建，这里只需确保目录存在
-    template_dir = os.path.expanduser('~/.proxy-manager/templates')
-    os.makedirs(template_dir, exist_ok=True)
+    # 模板目录已在模块导入时创建，这里直接使用
+    # template_dir 已在文件开头定义
+
+    # 创建完整的HTML模板（功能更丰富）
+    login_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理 - 登录</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+        }
+        .success {
+            background: #efe;
+            color: #3c3;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>🔐 代理管理登录</h1>
+        <div id="message"></div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>管理员密码</label>
+                <input type="password" id="password" placeholder="请输入管理员密码" required autofocus>
+            </div>
+            <button type="submit">登录</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    messageDiv.className = 'message success';
+                    messageDiv.textContent = data.message;
+                    setTimeout(() => window.location.href = '/', 1000);
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.textContent = data.message;
+                }
+            } catch (err) {
+                messageDiv.className = 'message error';
+                messageDiv.textContent = '登录失败，请重试';
+            }
+        });
+    </script>
+</body>
+</html>'''
+
+    index_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理面板</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .header h1 {
+            color: #333;
+            font-size: 24px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        .add-user-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+        }
+        .form-group label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        th {
+            background: #f8f9fa;
+            color: #666;
+            font-weight: 600;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-enabled {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        .status-disabled {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        .config-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .config-modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .config-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .config-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+        }
+        .config-tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        .config-url {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .qrcode-container {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .message-modal-btn.secondary:hover {
+            background: #d0d0d0;
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 代理管理面板</h1>
+            <button class="btn btn-danger" onclick="logout()">退出登录</button>
+        </div>
+
+        <div class="card">
+            <h2>添加用户</h2>
+            <form class="add-user-form" id="addUserForm">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="username" placeholder="输入用户名" required>
+                </div>
+                <div class="form-group">
+                    <label>流量限制(GB)</label>
+                    <input type="number" id="trafficLimit" placeholder="0为无限" value="0" min="0">
+                </div>
+                <div></div>
+                <button type="submit" class="btn btn-primary">添加用户</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>用户列表</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>用户名</th>
+                        <th>UUID</th>
+                        <th>流量使用</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTable">
+                    <tr><td colspan="5" style="text-align:center;">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-modal" id="configModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">用户配置</h2>
+            <div class="config-tabs">
+                <button class="config-tab active" data-tab="vless">VLESS</button>
+                <button class="config-tab" data-tab="vmess">VMESS</button>
+                <button class="config-tab" data-tab="trojan">Trojan</button>
+                <button class="config-tab" data-tab="ss">Shadowsocks</button>
+                <button class="config-tab" data-tab="clash">Clash</button>
+            </div>
+
+            <div id="tabContent">
+                <div class="config-url" id="configUrl"></div>
+                <button class="copy-btn" onclick="copyConfig()">复制链接</button>
+
+                <div class="qrcode-container">
+                    <h3>扫描二维码</h3>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn" onclick="closeModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QRCode 库 - 国内高速CDN源 (按速度排序) -->
+    <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // 如果主CDN加载失败，自动尝试备用源
+        if (typeof QRCode === 'undefined') {
+            console.log('主CDN加载失败，尝试备用源...');
+            var script = document.createElement('script');
+            script.src = 'https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+            script.onerror = function() {
+                console.log('备用源1加载失败，尝试备用源2...');
+                var script2 = document.createElement('script');
+                script2.src = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
+                document.head.appendChild(script2);
+            };
+            document.head.appendChild(script);
+        } else {
+            console.log('✅ QRCode库加载成功');
+        }
+    </script>
+    <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
+        let currentUsers = [];
+
+        async function loadUsers() {
+            const res = await fetch('/api/users');
+            const data = await res.json();
+            currentUsers = data.users;
+            renderUsers();
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('userTable');
+            tbody.innerHTML = currentUsers.map(user => `
+                <tr>
+                    <td><strong>${user.username}</strong></td>
+                    <td style="font-family: monospace; font-size: 12px;">${user.uuid.substring(0, 8)}...</td>
+                    <td>${user.traffic}</td>
+                    <td><span class="status-badge ${user.status === '启用' ? 'status-enabled' : 'status-disabled'}">${user.status}</span></td>
+                    <td>
+                        <button class="btn btn-primary" onclick="showConfig('${user.username}')">配置</button>
+                        <button class="btn" onclick="toggleUser('${user.username}')">切换</button>
+                        <button class="btn btn-danger" onclick="deleteUser('${user.username}')">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('addUserForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const trafficLimit = document.getElementById('trafficLimit').value;
+
+            const res = await fetch('/api/user/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, traffic_limit: parseInt(trafficLimit) })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                const message = `用户添加成功！\n\n用户名: ${data.user.username}\n密码: ${data.user.password}\n\n请保存此密码！`;
+                showMessage('添加成功', message, 'success', true);
+                document.getElementById('addUserForm').reset();
+                loadUsers();
+            } else {
+                showMessage('添加失败', data.message, 'error');
+            }
+        });
+
+        let currentConfig = {};
+
+        async function showConfig(username) {
+            const user = currentUsers.find(u => u.username === username);
+            if (!user) {
+                showMessage('错误', '用户不存在', 'error');
+                return;
+            }
+
+            const password = prompt('请输入用户密码:');
+            if (!password) return;
+
+            try {
+                console.log(`正在获取用户 ${username} 的配置...`);
+
+                const res = await fetch(`/api/user/${username}/config?password=${password}`);
+
+                console.log(`API响应状态: ${res.status}`);
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+
+                console.log('配置数据:', data);
+
+                if (data.error) {
+                    showMessage('错误', data.error, 'error');
+                    return;
+                }
+
+                if (!data.vless && !data.vmess && !data.trojan && !data.ss) {
+                    showMessage('警告', '配置数据为空，请联系管理员', 'warning');
+                    return;
+                }
+
+                currentConfig = data;
+                document.getElementById('modalTitle').textContent = `配置 - ${username}`;
+                showTab('vless');
+                document.getElementById('configModal').classList.add('active');
+
+                console.log('配置模态框已显示');
+
+            } catch (error) {
+                console.error('获取配置失败:', error);
+                const errorMsg = `获取配置失败: ${error.message}\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确`;
+                showMessage('获取配置失败', errorMsg, 'error');
+            }
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+            const urls = {
+                vless: currentConfig.vless,
+                vmess: currentConfig.vmess,
+                trojan: currentConfig.trojan,
+                ss: currentConfig.ss,
+                clash: '配置文件格式，请使用下方链接'
+            };
+
+            document.getElementById('configUrl').textContent = urls[tab] || '暂不支持';
+
+            // 生成二维码
+            if (tab !== 'clash') {
+                const qrcodeContainer = document.getElementById('qrcode');
+                qrcodeContainer.innerHTML = ''; // 清空容器
+
+                // 创建新的容器元素
+                const qrElement = document.createElement('div');
+                qrcodeContainer.appendChild(qrElement);
+
+                // 使用qrcodejs库的正确API
+                try {
+                    new QRCode(qrElement, {
+                        text: urls[tab],
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                } catch (error) {
+                    console.error('二维码生成失败:', error);
+                    qrcodeContainer.innerHTML = '<p style="color: #f56565;">二维码生成失败，请使用复制链接功能</p>';
+                }
+            } else {
+                document.getElementById('qrcode').innerHTML = '<a href="/config/' + currentConfig.username + '.yaml" class="btn btn-primary">下载Clash配置</a>';
+            }
+        }
+
+        document.querySelectorAll('.config-tab').forEach(tab => {
+            tab.addEventListener('click', () => showTab(tab.dataset.tab));
+        });
+
+        function copyConfig() {
+            const text = document.getElementById('configUrl').textContent;
+            
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                // 降级到传统方法
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function closeModal() {
+            document.getElementById('configModal').classList.remove('active');
+        }
+
+        async function toggleUser(username) {
+            await fetch(`/api/user/${username}/toggle`, { method: 'POST' });
+            loadUsers();
+        }
+
+        async function deleteUser(username) {
+            if (!confirm('确定要删除用户 ' + username + ' 吗？')) return;
+            await fetch(`/api/user/${username}/delete`, { method: 'POST' });
+            loadUsers();
+        }
+
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                window.location.href = '/logout';
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>'''
+
+    user_config_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置 - {{ username }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .password-form {
+            margin-bottom: 30px;
+        }
+        .password-form input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .config-content {
+            display: none;
+        }
+        .config-content.active {
+            display: block;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+        }
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        .config-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .qrcode-box {
+            text-align: center;
+            padding: 30px 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .qrcode-box canvas {
+            max-width: 100%;
+            height: auto;
+            border: 5px solid white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .qrcode-box h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 代理配置</h1>
+
+        <div class="password-form" id="passwordForm">
+            <input type="password" id="password" placeholder="请输入用户密码" autofocus>
+            <button class="btn" onclick="loadConfig()">查看配置</button>
+            <div id="message" style="margin-top: 15px; text-align: center;"></div>
+        </div>
+
+        <div class="config-content" id="configContent">
+            <div class="tabs">
+                <button class="tab active">VLESS</button>
+                <button class="tab">VMESS</button>
+                <button class="tab">Trojan</button>
+                <button class="tab">Shadowsocks</button>
+                <button class="tab">Shadowrocket</button>
+                <button class="tab">Clash</button>
+            </div>
+
+            <div id="tabContent">
+                <div class="config-box" id="configUrl"></div>
+                <button class="copy-btn" onclick="copyConfig()">复制链接</button>
+
+                <div class="qrcode-box">
+                    <h3>扫描二维码导入</h3>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QRCode 库 - 国内高速CDN源 (按速度排序) -->
+    <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
+        // 如果主CDN加载失败，自动尝试备用源
+        if (typeof QRCode === 'undefined') {
+            console.log('主CDN加载失败，尝试备用源...');
+            var script = document.createElement('script');
+            script.src = 'https://cdn.bootcdn.net/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+            script.onerror = function() {
+                console.log('备用源1加载失败，尝试备用源2...');
+                var script2 = document.createElement('script');
+                script2.src = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
+                document.head.appendChild(script2);
+            };
+            document.head.appendChild(script);
+        } else {
+            console.log('✅ QRCode库加载成功');
+        }
+    </script>
+    <script>
+        let currentConfig = {};
+        let qrcodeLoaded = false;
+
+        // 检查QRCode库是否加载
+        function checkQRCode() {
+            if (typeof QRCode !== 'undefined') {
+                qrcodeLoaded = true;
+                console.log('✅ QRCode库已加载');
+            } else {
+                console.error('❌ QRCode库未加载');
+            }
+            return qrcodeLoaded;
+        }
+
+        // 等待QRCode库加载完成
+        function waitForQRCode(callback, maxAttempts = 50) {
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts++;
+                if (typeof QRCode !== 'undefined' || attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    if (typeof QRCode !== 'undefined') {
+                        qrcodeLoaded = true;
+                        callback();
+                    } else {
+                        console.error('QRCode库加载超时');
+                    }
+                }
+            }, 100);
+        }
+
+        async function loadConfig() {
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+
+            try {
+                const res = await fetch('/api/user/{{ username }}/config?password=' + password);
+                const data = await res.json();
+
+                if (data.error) {
+                    messageDiv.innerHTML = '<span style="color: #f56565;">' + data.error + '</span>';
+                    return;
+                }
+
+                currentConfig = data;
+                document.getElementById('passwordForm').style.display = 'none';
+                document.getElementById('configContent').classList.add('active');
+                
+                // 等待QRCode库加载完成后再显示配置
+                waitForQRCode(() => {
+                    showTab('vless');
+                });
+            } catch (err) {
+                messageDiv.innerHTML = '<span style="color: #f56565;">加载失败，请重试</span>';
+            }
+        }
+
+        function showTab(tab, clickedTab = null) {
+            // 移除所有active状态
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+            // 添加active状态
+            if (clickedTab) {
+                clickedTab.classList.add('active');
+            } else {
+                // 根据tab名称找到对应的按钮
+                const tabIndex = {'vless': 0, 'vmess': 1, 'trojan': 2, 'ss': 3, 'shadowrocket': 4, 'clash': 5}[tab] ?? 0;
+                document.querySelectorAll('.tab')[tabIndex]?.classList.add('active');
+            }
+
+            const urls = {
+                vless: currentConfig.vless,
+                vmess: currentConfig.vmess,
+                trojan: currentConfig.trojan,
+                ss: currentConfig.ss,
+                shadowrocket: currentConfig.shadowrocket || currentConfig.vless,
+                clash: '配置文件，请下载使用'
+            };
+
+            // 显示配置链接
+            const configUrlDiv = document.getElementById('configUrl');
+            if (configUrlDiv) {
+                configUrlDiv.textContent = urls[tab] || '暂不支持';
+            }
+
+            // 生成二维码
+            const qrcodeDiv = document.getElementById('qrcode');
+            if (qrcodeDiv) {
+                if (tab === 'clash') {
+                    // Clash配置显示下载链接
+                    qrcodeDiv.innerHTML = '<a href="/config/{{ username }}.yaml" style="display: block; padding: 15px; background: #667eea; color: white; text-decoration: none; border-radius: 10px; margin-top: 10px;">下载 Clash 配置文件</a>';
+                } else if (urls[tab]) {
+                    // 生成二维码
+                    qrcodeDiv.innerHTML = '<p style="color: #666; margin-bottom: 10px;">正在生成二维码...</p>';
+
+                    // 检查链接长度，VMESS等长链接不适合生成二维码
+                    const urlLength = urls[tab].length;
+                    const isVmess = tab === 'vmess';
+
+                    if (isVmess || urlLength > 800) {
+                        // VMESS链接或过长链接，不生成二维码
+                        qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style="color: #666; margin-bottom: 10px;">⚠️ ' + (isVmess ? 'VMESS' : '链接') + '过长，不适合生成二维码</p><p style="color: #999; font-size: 14px;">请使用下方按钮复制链接</p></div>';
+                    } else if (typeof QRCode === 'undefined') {
+                        qrcodeDiv.innerHTML = '<p style="color: #f56565;">二维码库未加载，请刷新页面重试</p>';
+                        return;
+                    }
+                    if (typeof QRCode === 'undefined') {
+                        qrcodeDiv.innerHTML = '<p style="color: #f56565;">二维码库加载中，请稍后刷新页面重试</p>';
+                        console.error('QRCode库未加载');
+                        return;
+                    }
+
+                    try {
+                        // 清空二维码容器
+                        qrcodeDiv.innerHTML = '';
+
+                        // 创建一个新的容器元素
+                        const qrContainer = document.createElement('div');
+                        qrcodeDiv.appendChild(qrContainer);
+
+                        // 使用 qrcodejs 库的 API
+                        if (typeof QRCode !== 'undefined') {
+                            new QRCode(qrContainer, {
+                                text: urls[tab],
+                                width: 250,
+                                height: 250,
+                                colorDark: '#000000',
+                                colorLight: '#ffffff',
+                                correctLevel: QRCode.CorrectLevel.L
+                            });
+                            console.log('二维码生成成功');
+                        } else {
+                            qrcodeDiv.innerHTML = '<p style="color: #f56565;">二维码库未加载，请刷新页面重试</p>';
+                        }
+                    } catch (e) {
+                        console.error('二维码生成异常:', e);
+qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style="color: #f56565;">❌ 二维码生成失败</p><p style="color: #999; font-size: 14px; margin-top: 10px;">链接过长或不支持<br>请使用下方按钮复制链接</p></div>';
+                    }
+                } else {
+                    qrcodeDiv.innerHTML = '<p style="color: #999;">暂无二维码</p>';
+                }
+            }
+        }
+
+        function copyConfig() {
+            const text = document.getElementById('configUrl').textContent;
+            
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                // 降级到传统方法
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查QRCode库
+            checkQRCode();
+
+            // 为所有tab按钮添加点击事件
+            document.querySelectorAll('.tab').forEach((tabBtn, index) => {
+                tabBtn.addEventListener('click', function() {
+                    const tabTypes = ['vless', 'vmess', 'trojan', 'ss', 'shadowrocket', 'clash'];
+                    showTab(tabTypes[index], this);
+                });
+            });
+
+            // 密码输入框回车事件
+            document.getElementById('password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') loadConfig();
+            });
+        });
+    </script>
+</body>
+</html>'''
+
+    # 保存模板
+    with open(f'{template_dir}/login.html', 'w', encoding='utf-8') as f:
+        f.write(login_html)
+    with open(f'{template_dir}/index.html', 'w', encoding='utf-8') as f:
+        f.write(index_html)
+    with open(f'{template_dir}/user_config.html', 'w', encoding='utf-8') as f:
+        f.write(user_config_html)
 
     # 从配置文件读取Web端口
     web_port = 5080  # 默认端口
