@@ -111,6 +111,8 @@ if [[ "$IS_MACOS" == "true" ]]; then
 else
     # Linux依赖安装
     if [[ "${release}" == "centos" ]]; then
+        # 先安装EPEL仓库（CentOS需要）
+        ${systemPackage} install -y epel-release 2>/dev/null || true
         ${systemPackage} install -y curl wget unzip qrencode python3 python3-pip openssl python3-devel 2>/dev/null
         ${systemPackage} install -y gcc gcc-c++ make 2>/dev/null || true
     else
@@ -167,7 +169,16 @@ install_python_packages() {
     # 方法4: 使用系统包管理器（CentOS/RHEL）
     if [[ "$installed" == "false" ]] && [[ "${release}" == "centos" ]]; then
         echo "  尝试使用 yum/dnf 安装 Python 包..."
+        # 先安装EPEL仓库
+        ${systemPackage} install -y epel-release 2>/dev/null || true
+        # 尝试安装系统Python包
         ${systemPackage} install -y python3-flask python3-qrcode python3-pillow python3-pyyaml python3-cryptography 2>/dev/null && installed=true
+
+        # 如果系统包失败，使用pip with --user
+        if [[ "$installed" == "false" ]] && command -v python3 &>/dev/null; then
+            echo "  尝试使用 python3 -m pip --user 安装..."
+            python3 -m pip install --user -q $packages 2>/dev/null && installed=true
+        fi
     fi
 
     if [[ "$installed" == "true" ]]; then
