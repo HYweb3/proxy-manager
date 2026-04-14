@@ -2,15 +2,13 @@
 
 🚀 **一键安装代理管理系统** - 支持 XRay 多协议 + Web 管理界面
 
-## ⚡ 快速开始
+## ⚡ 一句话一键安装指令
 
 ```bash
-# 一键安装（推荐）
-sudo bash one_click_install.sh
-
-# 卸载
-sudo bash uninstall.sh
+bash <(curl -Ls https://raw.githubusercontent.com/HYweb3/proxy-manager/main/install-from-github.sh)
 ```
+
+**就这么简单！** 一行命令即可完成所有安装配置。
 
 ## 🌟 主要特性
 
@@ -48,21 +46,20 @@ sudo bash uninstall.sh
 - **版本**: 10.15+ (Big Sur/Monterey/Ventura)
 - **模式**: Web 管理界面（用于测试开发）
 
-## 📦 安装说明
+## 📦 其他安装方式
 
-### 方式1: 一键安装（推荐）
+### 本地安装
 ```bash
-# 下载并运行
+# 下载ZIP文件
+wget https://github.com/HYweb3/proxy-manager/raw/main/proxy-manager-full.zip
+
+# 解压并安装
+unzip proxy-manager-full.zip
+cd proxy-manager-src
 sudo bash one_click_install.sh
 ```
 
-### 方式2: 从 GitHub 安装
-```bash
-# 使用 GitHub 安装脚本
-sudo bash install-from-github.sh
-```
-
-### 方式3: 手动安装
+### 手动安装
 ```bash
 # 1. 安装依赖
 pip3 install flask flask-qrcode qrcode pillow pyyaml
