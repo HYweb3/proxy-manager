@@ -485,20 +485,57 @@ def user_page(username):
                          domain=manager.domain)
 
 
+@app.route('/api/reset-password', methods=['POST'])
+def reset_password():
+    """重置用户密码API"""
+    data = request.get_json()
+    username = data.get('username')
+    new_password = data.get('new_password')
+    current_password = data.get('current_password')
+
+    if not all([username, new_password, current_password]):
+        return jsonify({'success': False, 'message': '参数不完整'})
+
+    # 重置密码
+    success, message = manager.reset_user_password(username, new_password, current_password)
+    return jsonify({'success': success, 'message': message})
+
+
+@app.route('/api/admin/set-password', methods=['POST'])
+def admin_set_password():
+    """管理员设置用户密码API"""
+    if 'logged_in' not in session:
+        return jsonify({'success': False, 'message': '未登录'})
+
+    data = request.get_json()
+    username = data.get('username')
+    new_password = data.get('new_password')
+
+    if not all([username, new_password]):
+        return jsonify({'success': False, 'message': '参数不完整'})
+
+    # 管理员直接设置密码
+    success, message = manager.set_user_password(username, new_password)
+    return jsonify({'success': success, 'message': message})
+
+
 @app.route('/config/<username>.yaml')
 def clash_config(username):
     """下载Clash配置文件"""
-    user = manager.get_user(username)
-    if not user:
-        return "用户不存在", 404
+    try:
+        user = manager.get_user(username)
+        if not user:
+            return "用户不存在", 404
 
-    config = manager.generate_clash_config(user)
-    return send_file(
-        io.BytesIO(config.encode()),
-        mimetype='text/yaml',
-        as_attachment=True,
-        download_name=f'clash_{username}.yaml'
-    )
+        config = manager.generate_clash_config(user)
+        return send_file(
+            io.BytesIO(config.encode()),
+            mimetype='text/yaml',
+            as_attachment=True,
+            download_name=f'{username}.yaml'
+        )
+    except Exception as e:
+        return f"配置生成失败: {str(e)}", 500
 
 
 if __name__ == '__main__':

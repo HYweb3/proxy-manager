@@ -313,31 +313,35 @@ class ProxyManager:
 
     def generate_clash_config(self, user):
         """生成Clash配置"""
-        config = {
-            "proxies": [
-                {
-                    "name": f"ProxyManager_{user['username']}",
-                    "type": "vless",
-                    "server": self.domain,
-                    "port": 443,  # VLESS_PORT - 标准HTTPS端口
-                    "uuid": user['uuid'],
-                    "udp": True,
-                    "tls": True,
-                    "network": "tcp"
-                }
-            ],
-            "proxy-groups": [
-                {
-                    "name": "Proxy",
-                    "type": "select",
-                    "proxies": [f"ProxyManager_{user['username']}"]
-                }
-            ],
-            "rules": [
-                "MATCH,Proxy"
-            ]
-        }
-        return yaml.dump(config) if hasattr(yaml, 'dump') else json.dumps(config, indent=2)
+        try:
+            config = {
+                "proxies": [
+                    {
+                        "name": f"ProxyManager_{user['username']}",
+                        "type": "vless",
+                        "server": self.domain,
+                        "port": 443,  # VLESS_PORT - 标准HTTPS端口
+                        "uuid": user['uuid'],
+                        "udp": True,
+                        "tls": True,
+                        "network": "tcp"
+                    }
+                ],
+                "proxy-groups": [
+                    {
+                        "name": "Proxy",
+                        "type": "select",
+                        "proxies": [f"ProxyManager_{user['username']}"]
+                    }
+                ],
+                "rules": [
+                    "MATCH,Proxy"
+                ]
+            }
+            return yaml.dump(config)
+        except Exception as e:
+            # 如果 YAML 生成失败，返回 JSON 格式
+            return json.dumps(config, indent=2)
 
     def generate_shadowrocket_config(self, user):
         """生成ShadowRocket配置 - Shadowrocket支持VLESS链接"""
@@ -361,6 +365,47 @@ class ProxyManager:
     def verify_admin(self, password):
         """验证管理员密码"""
         return password == self.admin_password
+
+    def reset_user_password(self, username, new_password, requester_password):
+        """重置用户密码
+
+        Args:
+            username: 要重置密码的用户名
+            new_password: 新密码
+            requester_password: 请求者的密码（用于权限验证）
+
+        Returns:
+            (success, message) 元组
+        """
+        # 验证请求者身份（管理员或用户本人）
+        is_admin = self.verify_admin(requester_password)
+
+        user = self.get_user(username)
+        if not user:
+            return False, "用户不存在"
+
+        # 如果不是管理员，检查是否为用户本人
+        if not is_admin:
+            if user['password'] != requester_password:
+                return False, "密码错误"
+            # 普通用户只能重置自己的密码
+            if requester_password != user['password']:
+                return False, "只能重置自己的密码"
+
+        # 重置密码
+        user['password'] = new_password
+        self.save_data()
+        return True, "密码重置成功"
+
+    def set_user_password(self, username, new_password):
+        """直接设置用户密码（管理员专用）"""
+        user = self.get_user(username)
+        if not user:
+            return False, "用户不存在"
+
+        user['password'] = new_password
+        self.save_data()
+        return True, "密码设置成功"
 
 
 def main():
