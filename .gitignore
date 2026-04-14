@@ -1,1 +1,6 @@
 .openclaw/
+.openclaw*
+.hermes/
+.claude/
+.bb-browser/
+.nvm/
