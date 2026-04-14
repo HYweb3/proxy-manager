@@ -74,10 +74,26 @@ echo ""
 
 # 步骤1: 停止服务
 echo -e "${YELLOW}[1/6]${PLAIN} 停止服务..."
-systemctl stop xray 2>/dev/null
-systemctl stop proxy-web 2>/dev/null
-systemctl disable xray 2>/dev/null
-systemctl disable proxy-web 2>/dev/null
+
+# 强制停止服务，避免卡住
+systemctl stop xray 2>/dev/null || true
+systemctl stop proxy-web 2>/dev/null || true
+systemctl disable xray 2>/dev/null || true
+systemctl disable proxy-web 2>/dev/null || true
+
+# 等待最多5秒，如果服务还在运行则强制杀死
+for i in {1..5}; do
+    if ! systemctl is-active --quiet xray 2>/dev/null && ! systemctl is-active --quiet proxy-web 2>/dev/null; then
+        break
+    fi
+    if [ $i -eq 5 ]; then
+        echo -e "${YELLOW}⚠${PLAIN} 服务未正常停止，强制终止..."
+        pkill -9 -f "python.*proxy_web" 2>/dev/null || true
+        pkill -9 -f "xray" 2>/dev/null || true
+    fi
+    sleep 1
+done
+
 echo -e "${GREEN}✓${PLAIN} 服务已停止"
 
 # 步骤2: 删除systemd服务
@@ -106,20 +122,24 @@ echo -e "${GREEN}✓${PLAIN} XRay-core已删除"
 
 # 步骤6: 关闭防火墙端口
 echo -e "${YELLOW}[6/6]${PLAIN} 配置防火墙..."
-if command -v firewall-cmd &>/dev/null; then
-    firewall-cmd --permanent --remove-port=500/tcp 2>/dev/null
-    firewall-cmd --permanent --remove-port=501/tcp 2>/dev/null
-    firewall-cmd --permanent --remove-port=502/tcp 2>/dev/null
-    firewall-cmd --permanent --remove-port=503/tcp 2>/dev/null
-    firewall-cmd --permanent --remove-port=5080/tcp 2>/dev/null
-    firewall-cmd --reload 2>/dev/null
+
+# 设置超时避免防火墙命令卡住
+timeout 10 firewall-cmd --state &>/dev/null
+if [ $? -eq 0 ]; then
+    # 使用防火墙命令，设置超时避免卡住
+    timeout 5 firewall-cmd --permanent --remove-port=500/tcp &>/dev/null || true
+    timeout 5 firewall-cmd --permanent --remove-port=501/tcp &>/dev/null || true
+    timeout 5 firewall-cmd --permanent --remove-port=502/tcp &>/dev/null || true
+    timeout 5 firewall-cmd --permanent --remove-port=503/tcp &>/dev/null || true
+    timeout 5 firewall-cmd --permanent --remove-port=5080/tcp &>/dev/null || true
+    timeout 10 firewall-cmd --reload &>/dev/null || true
     echo -e "${GREEN}✓${PLAIN} 防火墙规则已移除"
 elif command -v ufw &>/dev/null; then
-    ufw delete allow 500/tcp 2>/dev/null
-    ufw delete allow 501/tcp 2>/dev/null
-    ufw delete allow 502/tcp 2>/dev/null
-    ufw delete allow 503/tcp 2>/dev/null
-    ufw delete allow 5080/tcp 2>/dev/null
+    ufw delete allow 500/tcp &>/dev/null || true
+    ufw delete allow 501/tcp &>/dev/null || true
+    ufw delete allow 502/tcp &>/dev/null || true
+    ufw delete allow 503/tcp &>/dev/null || true
+    ufw delete allow 5080/tcp &>/dev/null || true
     echo -e "${GREEN}✓${PLAIN} 防火墙规则已移除"
 else
     echo -e "${YELLOW}⚠${PLAIN} 未检测到防火墙"

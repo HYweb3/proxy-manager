@@ -492,18 +492,26 @@ else
 
 SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 
-# 停止旧服务
+# 停止旧服务（改进版，避免卡住）
 if [[ -f "${WEB_DIR}/web.pid" ]]; then
     OLD_PID=\$(cat ${WEB_DIR}/web.pid 2>/dev/null)
     if [[ -n "\$OLD_PID" ]] && ps -p \$OLD_PID > /dev/null 2>&1; then
         echo "停止旧服务 (PID: \$OLD_PID)"
-        kill \$OLD_PID 2>/dev/null
+        # 使用timeout和kill -9强制终止
+        timeout 3 kill \$OLD_PID 2>/dev/null || kill -9 \$OLD_PID 2>/dev/null || true
+        sleep 1
     fi
 fi
 
-# 清理残留进程
-pkill -f "proxy_web.py" 2>/dev/null || true
-sleep 1
+# 清理残留进程（改进版）
+pkill -9 -f "proxy_web.py" 2>/dev/null || true
+# 等待进程完全结束
+for i in {1..3}; do
+    if ! pgrep -f "proxy_web.py" > /dev/null 2>&1; then
+        break
+    fi
+    sleep 1
+done
 
 # 找到proxy_web.py
 if [[ -f "\${SCRIPT_DIR}/proxy_web.py" ]]; then
@@ -619,9 +627,15 @@ if [[ "$IS_MACOS" == "false" ]]; then
 else
     # macOS系统启动
     if [[ "${WEB_INSTALLED}" == "true" ]]; then
-        # 停止已存在的服务
-        pkill -f "proxy_web.py" 2>/dev/null || true
-        sleep 1
+        # 停止已存在的服务（改进版，避免卡住）
+        pkill -9 -f "proxy_web.py" 2>/dev/null || true
+        # 等待进程完全结束
+        for i in {1..3}; do
+            if ! pgrep -f "proxy_web.py" > /dev/null 2>&1; then
+                break
+            fi
+            sleep 1
+        done
 
         # 启动Web服务
         cd ${SCRIPT_DIR}
