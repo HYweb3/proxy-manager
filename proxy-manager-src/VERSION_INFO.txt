@@ -1,0 +1,138 @@
+╔════════════════════════════════════════════════════════════╗
+║     Proxy Manager v2.1-FINAL 版本信息                     ║
+╚════════════════════════════════════════════════════════════╝
+
+📦 发行信息:
+-----------
+版本号: v2.1-FINAL
+发布日期: 2026-04-14 13:32
+文件大小: 93KB (proxy-manager-full.zip)
+
+✨ 主要修复:
+-----------
+✅ QRCode API修复 - "QRCode.toCanvas is not a function"
+✅ 模态框界面 - 替换原生alert弹窗
+✅ 内容可复制 - 所有信息可选择和复制
+✅ 自动依赖安装 - 智能pip3和系统包管理器支持
+✅ 错误处理增强 - 详细的调试日志和提示
+
+🔍 验证结果:
+-----------
+✅ new QRCode 调用: 2处
+✅ message-modal 样式: 54处
+✅ install_missing_modules: 2处
+❌ QRCode.toCanvas 调用: 0处 (已移除)
+
+📂 包含文件:
+-----------
+📄 核心文件:
+   - proxy_web.py (63KB) - 包含所有修复
+   - proxy_manager.py (14KB) - 核心管理模块
+
+📋 文档文件:
+   - README_v2.1.md - 完整版本说明
+   - README.md - 主要文档
+   - QUICK_START.md - 快速开始
+   - QRCODE_FIX.txt - QRCode修复说明
+   - VERSION.txt - 版本信息
+
+🔧 工具脚本:
+   - one_click_install.sh - 一键安装
+   - install.sh - 标准安装
+   - install-from-github.sh - GitHub安装
+   - fix_ports.sh - 端口修复
+   - security_check.sh - 安全检查
+
+🚀 快速使用:
+-----------
+# 解压文件
+unzip proxy-manager-full.zip
+
+# 进入目录
+cd proxy-manager-src
+
+# 一键安装
+sudo bash one_click_install.sh
+
+# 或者从GitHub安装
+sudo bash install-from-github.sh
+
+🧪 验证安装:
+-----------
+# 检查服务状态
+sudo systemctl status proxy-web
+
+# 检查文件版本
+grep "new QRCode" /var/www/proxy-manager/proxy_web.py | wc -l
+# 应该输出: 2
+
+# 检查模态框功能
+grep "message-modal" /var/www/proxy-manager/proxy_web.py | wc -l
+# 应该输出: 54
+
+💡 浏览器测试:
+-----------
+# 1. 打开管理面板
+http://your-server:5080
+
+# 2. 测试功能
+- 登录功能
+- 用户管理
+- 配置生成
+- 二维码显示
+
+# 3. 强制刷新 (如果看到旧界面)
+Ctrl+Shift+R (Windows/Linux)
+Cmd+Shift+R (Mac)
+
+🆘 故障排除:
+-----------
+如果遇到问题:
+
+1. 检查服务器日志
+   sudo journalctl -u proxy-web -n 50
+
+2. 验证文件版本
+   grep "new QRCode" /var/www/proxy-manager/proxy_web.py
+
+3. 重启服务
+   sudo systemctl restart proxy-web
+
+4. 清除浏览器缓存
+   Ctrl+Shift+Delete
+
+📊 版本对比:
+-----------
+v2.1-FINAL vs v2.0:
++ 修复QRCode API错误
++ 完善模态框功能
++ 改进内容复制体验
++ 增强错误处理
+
+v2.1-FINAL vs v1.0:
++ 自动依赖安装
++ 现代化界面
++ 内容可复制功能
++ 系统兼容性改进
+
+🌟 推荐理由:
+-----------
+✅ 最稳定的版本
+✅ 包含所有已知问题修复
+✅ 兼容CentOS和Ubuntu
+✅ 完整的错误处理
+✅ 用户友好的界面
+✅ 详细文档支持
+
+════════════════════════════════════════════════════════════
+✅ 所有修复已完成并验证
+✅ ZIP文件已更新 (93KB)
+✅ GitHub已同步
+✅ 可以安全部署
+════════════════════════════════════════════════════════════
+
+下载链接: proxy-manager-full.zip
+文档说明: README_v2.1.md
+技术支持: https://github.com/HYweb3/proxy-manager
+
+*Proxy Manager v2.1-FINAL - 完整修复版本* 🚀

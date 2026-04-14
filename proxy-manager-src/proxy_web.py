@@ -1121,10 +1121,27 @@ if __name__ == '__main__':
 
             // 生成二维码
             if (tab !== 'clash') {
-                QRCode.toCanvas(document.createElement('canvas'), urls[tab], { width: 200 }, (error, canvas) => {
-                    document.getElementById('qrcode').innerHTML = '';
-                    if (!error) document.getElementById('qrcode').appendChild(canvas);
-                });
+                const qrcodeContainer = document.getElementById('qrcode');
+                qrcodeContainer.innerHTML = ''; // 清空容器
+
+                // 创建新的容器元素
+                const qrElement = document.createElement('div');
+                qrcodeContainer.appendChild(qrElement);
+
+                // 使用qrcodejs库的正确API
+                try {
+                    new QRCode(qrElement, {
+                        text: urls[tab],
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                } catch (error) {
+                    console.error('二维码生成失败:', error);
+                    qrcodeContainer.innerHTML = '<p style="color: #f56565;">二维码生成失败，请使用复制链接功能</p>';
+                }
             } else {
                 document.getElementById('qrcode').innerHTML = '<a href="/config/' + currentConfig.username + '.yaml" class="btn btn-primary">下载Clash配置</a>';
             }

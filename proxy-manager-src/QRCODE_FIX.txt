@@ -1,0 +1,15 @@
+Proxy Manager v2.1 - QRCode Error Fix
+创建时间: Tue Apr 14 13:13:22 CST 2026
+更新内容:
+- 修复 QRCode.toCanvas API 错误
+- 使用正确的 qrcodejs API
+- 改进错误处理
+- 确保二维码正常生成
+
+修复的文件:
+- proxy_web.py (showTab 函数)
+
+验证命令:
+grep -c 'new QRCode' proxy_web.py  # 应该输出 2
+grep -c 'QRCode.toCanvas' proxy_web.py  # 应该输出 0
+
