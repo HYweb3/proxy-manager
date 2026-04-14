@@ -178,6 +178,16 @@ install_python_packages() {
         if [[ "$installed" == "false" ]] && command -v python3 &>/dev/null; then
             echo "  尝试使用 python3 -m pip --user 安装..."
             python3 -m pip install --user -q $packages 2>/dev/null && installed=true
+
+            # 如果还是失败，分步安装各个包
+            if [[ "$installed" == "false" ]]; then
+                echo "  分步安装 Python 包..."
+                for package in flask flask-qrcode qrcode pillow pyyaml cryptography; do
+                    echo "    安装 $package..."
+                    python3 -m pip install --user -q $package 2>/dev/null || true
+                done
+                installed=true
+            fi
         fi
     fi
 
@@ -200,6 +210,19 @@ echo "  验证 Python 模块..."
 python3 -c "import flask" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} flask" || echo -e "    ${YELLOW}⚠${PLAIN} flask 未安装"
 python3 -c "import qrcode" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} qrcode" || echo -e "    ${YELLOW}⚠${PLAIN} qrcode 未安装"
 python3 -c "from PIL import Image" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} pillow" || echo -e "    ${YELLOW}⚠${PLAIN} pillow 未安装"
+python3 -c "import yaml" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} pyyaml" || echo -e "    ${YELLOW}⚠${PLAIN} pyyaml 未安装"
+python3 -c "import flask_qrcode" 2>/dev/null && echo -e "    ${GREEN}✓${PLAIN} flask-qrcode" || echo -e "    ${YELLOW}⚠${PLAIN} flask-qrcode 未安装"
+
+# 如果有关键模块缺失，尝试补充安装
+if ! python3 -c "import flask_qrcode, qrcode, yaml" 2>/dev/null; then
+    echo "  检测到关键模块缺失，尝试补充安装..."
+    for module in flask-qrcode qrcode pyyaml; do
+        if ! python3 -c "import ${module//-/_}" 2>/dev/null; then
+            echo "    安装 $module..."
+            python3 -m pip install --user -q $module 2>/dev/null || true
+        fi
+    done
+fi
 
 # ============================================
 # 步骤3: 安装XRay-core (仅Linux)

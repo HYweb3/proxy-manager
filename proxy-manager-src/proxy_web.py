@@ -17,7 +17,7 @@ def install_missing_modules(modules):
     # 尝试使用 pip3 安装
     try:
         cmd = [sys.executable, '-m', 'pip', 'install', '-q'] + modules
-        result = subprocess.run(cmd, capture_output=True, timeout=300)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
         if result.returncode == 0:
             print("✅ 模块安装成功", file=sys.stderr)
             return True
@@ -48,7 +48,7 @@ def install_missing_modules(modules):
 
             if packages:
                 cmd = ['apt-get', 'install', '-y'] + packages
-                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
                 if result.returncode == 0:
                     print("✅ 系统包安装成功", file=sys.stderr)
                     return True
@@ -69,7 +69,7 @@ def install_missing_modules(modules):
 
             if packages:
                 cmd = ['yum', 'install', '-y'] + packages
-                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
                 if result.returncode == 0:
                     print("✅ 系统包安装成功", file=sys.stderr)
                     return True
