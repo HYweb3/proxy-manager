@@ -528,12 +528,22 @@ def clash_config(username):
             return "用户不存在", 404
 
         config = manager.generate_clash_config(user)
-        return send_file(
-            io.BytesIO(config.encode()),
-            mimetype='text/yaml',
-            as_attachment=True,
-            download_name=f'{username}.yaml'
-        )
+        # 兼容不同版本的Flask
+        try:
+            return send_file(
+                io.BytesIO(config.encode()),
+                mimetype='text/yaml',
+                as_attachment=True,
+                download_name=f'{username}.yaml'
+            )
+        except TypeError:
+            # 旧版本Flask使用attachment_filename
+            return send_file(
+                io.BytesIO(config.encode()),
+                mimetype='text/yaml',
+                as_attachment=True,
+                attachment_filename=f'{username}.yaml'
+            )
     except Exception as e:
         return f"配置生成失败: {str(e)}", 500
 
@@ -1278,6 +1288,7 @@ if __name__ == '__main__':
                     <td><span class="status-badge ${user.status === '启用' ? 'status-enabled' : 'status-disabled'}">${user.status}</span></td>
                     <td>
                         <button class="btn btn-primary" onclick="showConfig('${user.username}')">配置</button>
+                        <button class="btn" onclick="resetUserPassword('${user.username}')">重置密码</button>
                         <button class="btn" onclick="toggleUser('${user.username}')">切换</button>
                         <button class="btn btn-danger" onclick="deleteUser('${user.username}')">删除</button>
                     </td>
@@ -1451,6 +1462,35 @@ if __name__ == '__main__':
             if (!confirm('确定要删除用户 ' + username + ' 吗？')) return;
             await fetch(`/api/user/${username}/delete`, { method: 'POST' });
             loadUsers();
+        }
+
+        async function resetUserPassword(username) {
+            const newPassword = prompt('请输入用户 ' + username + ' 的新密码:');
+            if (!newPassword) return;
+
+            if (newPassword.length < 6) {
+                showMessage('密码错误', '密码长度至少为6位', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/set-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, new_password: newPassword })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    showMessage('密码设置成功', '用户 ' + username + ' 的密码已成功修改', 'success');
+                } else {
+                    showMessage('密码设置失败', data.message, 'error');
+                }
+            } catch (error) {
+                console.error('密码设置错误:', error);
+                showMessage('密码设置失败', '网络错误，请稍后重试', 'error');
+            }
         }
 
         function logout() {
@@ -1828,6 +1868,27 @@ if __name__ == '__main__':
                     <h3>📱 扫描二维码导入</h3>
                     <div id="qrcode"></div>
                 </div>
+
+                <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #f0f0f0;">
+                    <h3 style="text-align: center; color: #1f2937; margin-bottom: 16px; font-size: 18px;">🔐 密码管理</h3>
+                    <div style="max-width: 400px; margin: 0 auto;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; color: #6b7280; margin-bottom: 8px; font-size: 14px; font-weight: 600;">当前密码</label>
+                            <input type="password" id="currentPassword" placeholder="输入当前密码" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; color: #6b7280; margin-bottom: 8px; font-size: 14px; font-weight: 600;">新密码</label>
+                            <input type="password" id="newPassword" placeholder="输入新密码" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; color: #6b7280; margin-bottom: 8px; font-size: 14px; font-weight: 600;">确认新密码</label>
+                            <input type="password" id="confirmPassword" placeholder="再次输入新密码" style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                        </div>
+                        <button onclick="resetPassword()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            🔄 重置密码
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2120,6 +2181,54 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
                 showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
             }
             document.body.removeChild(textarea);
+        }
+
+        async function resetPassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showMessage('输入错误', '请填写所有密码字段', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showMessage('密码不匹配', '新密码和确认密码不一致', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showMessage('密码太短', '新密码长度至少为6位', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: '{{ username }}',
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    showMessage('密码重置成功', '您的密码已成功修改，请记住新密码', 'success');
+                    // 清空密码输入框
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                } else {
+                    showMessage('密码重置失败', data.message, 'error');
+                }
+            } catch (error) {
+                console.error('密码重置错误:', error);
+                showMessage('密码重置失败', '网络错误，请稍后重试', 'error');
+            }
         }
 
         // 页面加载完成后初始化
