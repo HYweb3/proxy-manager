@@ -551,77 +551,184 @@ if __name__ == '__main__':
     <title>代理管理 - 登录</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 20px;
+            position: relative;
+            overflow: hidden;
         }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
         .login-box {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 400px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 420px;
             width: 100%;
+            position: relative;
+            animation: fadeInUp 0.6s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
+
+        .login-box::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            border-radius: 24px;
+            z-index: -1;
+            opacity: 0.1;
+        }
+
         h1 {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
+            color: #1f2937;
+            margin-bottom: 32px;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
         }
+
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
+
         label {
             display: block;
-            color: #666;
+            color: #4b5563;
             margin-bottom: 8px;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 14px;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
         }
+
         input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            padding: 16px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
             font-size: 16px;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #f9fafb;
+            color: #1f2937;
         }
+
         input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #23a6d5;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(35, 166, 213, 0.1);
+            transform: translateY(-1px);
         }
+
+        input::placeholder {
+            color: #9ca3af;
+        }
+
         button {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: 200% 200%;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.025em;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+
         button:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-position: right center;
         }
+
+        button:active {
+            transform: translateY(0);
+        }
+
         .message {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
             text-align: center;
+            font-weight: 500;
+            animation: fadeInUp 0.3s ease-out;
         }
+
         .error {
-            background: #fee;
-            color: #c33;
+            background: linear-gradient(135deg, #fee 0%, #fcc 100%);
+            color: #991b1b;
+            border: 1px solid #fecaca;
+            animation: shake 0.5s ease-in-out;
         }
+
         .success {
-            background: #efe;
-            color: #3c3;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        @media (max-width: 480px) {
+            .login-box {
+                padding: 32px 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
@@ -1362,119 +1469,219 @@ if __name__ == '__main__':
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>配置 - {{ username }}</title>
+    <title>代理配置 - {{ username }}</title>
     <style>
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
             min-height: 100vh;
             padding: 20px;
+            position: relative;
+        }
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
         .container {
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+            animation: fadeInUp 0.6s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            border-radius: 24px;
+            z-index: -1;
+            opacity: 0.1;
         }
         h1 {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
+            color: #1f2937;
+            margin-bottom: 32px;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
         }
         .password-form {
-            margin-bottom: 30px;
+            margin-bottom: 32px;
         }
         .password-form input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            padding: 16px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
             font-size: 16px;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #f9fafb;
+            color: #1f2937;
+        }
+        .password-form input:focus {
+            outline: none;
+            border-color: #23a6d5;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(35, 166, 213, 0.1);
+            transform: translateY(-1px);
         }
         .btn {
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-size: 200% 200%;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            background-position: right center;
         }
         .config-content {
             display: none;
         }
         .config-content.active {
             display: block;
+            animation: fadeInUp 0.4s ease-out;
         }
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 24px;
             border-bottom: 2px solid #f0f0f0;
+            overflow-x: auto;
         }
         .tab {
             flex: 1;
-            padding: 12px;
+            padding: 12px 16px;
             background: none;
             border: none;
             cursor: pointer;
-            color: #666;
-            font-weight: 500;
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+        .tab:hover {
+            color: #23a6d5;
         }
         .tab.active {
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
+            color: #23a6d5;
+            border-bottom-color: #23a6d5;
         }
         .config-box {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
+            padding: 20px;
+            border-radius: 12px;
             word-break: break-all;
-            font-family: monospace;
-            font-size: 12px;
-            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
+            color: #374151;
+            max-height: 200px;
+            overflow-y: auto;
         }
         .qrcode-box {
             text-align: center;
-            padding: 30px 20px;
-            background: #f8f9fa;
-            border-radius: 15px;
-            margin: 20px 0;
-            min-height: 300px;
+            padding: 32px 24px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            margin: 24px 0;
+            min-height: 350px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            border: 1px solid #dee2e6;
         }
         .qrcode-box canvas {
             max-width: 100%;
             height: auto;
-            border: 5px solid white;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 8px solid white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .qrcode-box canvas:hover {
+            transform: scale(1.02);
         }
         .qrcode-box h3 {
-            margin-bottom: 20px;
-            color: #333;
+            margin-bottom: 24px;
+            color: #1f2937;
+            font-size: 18px;
+            font-weight: 700;
         }
         .copy-btn {
-            background: #667eea;
+            background: #23a6d5;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
             cursor: pointer;
             width: 100%;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
-        /* 消息模态框样式 */
+        .copy-btn:hover {
+            background: #1e9bbb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
         .message-modal {
             display: none;
             position: fixed;
@@ -1482,7 +1689,8 @@ if __name__ == '__main__':
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
             z-index: 2000;
             align-items: center;
             justify-content: center;
@@ -1492,45 +1700,36 @@ if __name__ == '__main__':
         }
         .message-modal-content {
             background: white;
-            border-radius: 20px;
-            padding: 30px;
+            border-radius: 24px;
+            padding: 32px;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: slideIn 0.3s ease-out;
-        }
-        @keyframes slideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: fadeInUp 0.3s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .message-modal-header {
             display: flex;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
             border-bottom: 2px solid #f0f0f0;
         }
         .message-modal-icon {
             font-size: 32px;
-            margin-right: 15px;
+            margin-right: 16px;
         }
         .message-modal-title {
             font-size: 20px;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            color: #1f2937;
             flex: 1;
         }
         .message-modal-body {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
             max-height: 300px;
             overflow-y: auto;
             white-space: pre-wrap;
@@ -1538,30 +1737,27 @@ if __name__ == '__main__':
             font-family: 'Courier New', monospace;
             font-size: 14px;
             line-height: 1.6;
-            color: #333;
+            color: #374151;
             user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
         }
         .message-modal-body.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
         }
         .message-modal-body.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
         }
         .message-modal-body.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
         }
         .message-modal-footer {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             justify-content: flex-end;
         }
         .message-modal-btn {
@@ -1570,36 +1766,48 @@ if __name__ == '__main__':
             border-radius: 10px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 500;
-            transition: all 0.2s;
+            font-weight: 600;
+            transition: all 0.3s;
         }
         .message-modal-btn.primary {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
         .message-modal-btn.primary:hover {
-            background: #5568d3;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
         .message-modal-copy-btn {
-            background: #28a745;
+            background: #10b981;
             color: white;
             font-size: 14px;
-            padding: 8px 16px;
+            padding: 12px 20px;
         }
         .message-modal-copy-btn:hover {
-            background: #218838;
+            background: #059669;
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 32px 24px;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+            .tab {
+                flex: 1 1 calc(50% - 4px);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 代理配置</h1>
+        <h1>🚀 代理配置下载</h1>
+        <p style="text-align: center; color: #6b7280; margin-bottom: 32px; font-size: 14px;">请输入您的用户密码以获取配置</p>
 
         <div class="password-form" id="passwordForm">
             <input type="password" id="password" placeholder="请输入用户密码" autofocus>
             <button class="btn" onclick="loadConfig()">查看配置</button>
-            <div id="message" style="margin-top: 15px; text-align: center;"></div>
+            <div id="message" style="margin-top: 16px; text-align: center;"></div>
         </div>
 
         <div class="config-content" id="configContent">
@@ -1614,10 +1822,10 @@ if __name__ == '__main__':
 
             <div id="tabContent">
                 <div class="config-box" id="configUrl"></div>
-                <button class="copy-btn" onclick="copyConfig()">复制链接</button>
+                <button class="copy-btn" onclick="copyConfig()">📋 复制链接</button>
 
                 <div class="qrcode-box">
-                    <h3>扫描二维码导入</h3>
+                    <h3>📱 扫描二维码导入</h3>
                     <div id="qrcode"></div>
                 </div>
             </div>
@@ -1639,7 +1847,7 @@ if __name__ == '__main__':
         </div>
     </div>
 
-    <!-- QRCode 库 - 国内高速CDN源 (按速度排序) -->
+    <!-- QRCode 库 -->
     <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         // 消息模态框函数
