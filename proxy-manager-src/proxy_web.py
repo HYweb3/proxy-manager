@@ -224,27 +224,47 @@ def get_users():
 @app.route('/api/user/<username>/config')
 def get_user_config(username):
     """获取用户配置（无需登录，通过密码验证）"""
-    password = request.args.get('password')
-    user = manager.get_user(username)
+    try:
+        password = request.args.get('password')
+        print(f"[API] 获取用户配置请求: username={username}, password={'*' * len(password) if password else 'None'}")
 
-    if not user:
-        return jsonify({'error': '用户不存在'}), 404
+        if not password:
+            print("[API] 密码为空")
+            return jsonify({'error': '请提供密码'}), 400
 
-    if password != user['password']:
-        return jsonify({'error': '密码错误'}), 401
+        user = manager.get_user(username)
+        if not user:
+            print(f"[API] 用户不存在: {username}")
+            return jsonify({'error': '用户不存在'}), 404
 
-    # 生成各种配置链接
-    config = {
-        'username': user['username'],
-        'vless': manager.generate_vless_url(user),
-        'vmess': manager.generate_vmess_url(user),
-        'trojan': manager.generate_trojan_url(user),
-        'ss': manager.generate_ss_url(user),
-        'clash': manager.generate_clash_config(user),
-        'shadowrocket': manager.generate_shadowrocket_config(user)
-    }
+        print(f"[API] 找到用户: {user['username']}")
 
-    return jsonify(config)
+        if password != user['password']:
+            print("[API] 密码错误")
+            return jsonify({'error': '密码错误'}), 401
+
+        print("[API] 密码验证通过，正在生成配置...")
+
+        # 生成各种配置链接
+        config = {
+            'username': user['username'],
+            'vless': manager.generate_vless_url(user),
+            'vmess': manager.generate_vmess_url(user),
+            'trojan': manager.generate_trojan_url(user),
+            'ss': manager.generate_ss_url(user),
+            'clash': manager.generate_clash_config(user),
+            'shadowrocket': manager.generate_shadowrocket_config(user)
+        }
+
+        print(f"[API] 配置生成成功，协议数量: {len([k for k, v in config.items() if v and k != 'username'])}")
+
+        return jsonify(config)
+
+    except Exception as e:
+        print(f"[API] 错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'服务器错误: {str(e)}'}), 500
 
 
 @app.route('/api/user/<username>/qrcode')
@@ -821,23 +841,50 @@ if __name__ == '__main__':
 
         async function showConfig(username) {
             const user = currentUsers.find(u => u.username === username);
-            if (!user) return;
+            if (!user) {
+                alert('用户不存在');
+                return;
+            }
 
             const password = prompt('请输入用户密码:');
             if (!password) return;
 
-            const res = await fetch(`/api/user/${username}/config?password=${password}`);
-            const data = await res.json();
+            try {
+                console.log(`正在获取用户 ${username} 的配置...`);
 
-            if (data.error) {
-                alert(data.error);
-                return;
+                const res = await fetch(`/api/user/${username}/config?password=${password}`);
+
+                console.log(`API响应状态: ${res.status}`);
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+
+                console.log('配置数据:', data);
+
+                if (data.error) {
+                    alert('错误: ' + data.error);
+                    return;
+                }
+
+                if (!data.vless && !data.vmess && !data.trojan && !data.ss) {
+                    alert('配置数据为空，请联系管理员');
+                    return;
+                }
+
+                currentConfig = data;
+                document.getElementById('modalTitle').textContent = `配置 - ${username}`;
+                showTab('vless');
+                document.getElementById('configModal').classList.add('active');
+
+                console.log('配置模态框已显示');
+
+            } catch (error) {
+                console.error('获取配置失败:', error);
+                alert('获取配置失败: ' + error.message + '\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确');
             }
-
-            currentConfig = data;
-            document.getElementById('modalTitle').textContent = `配置 - ${username}`;
-            showTab('vless');
-            document.getElementById('configModal').classList.add('active');
         }
 
         function showTab(tab) {
