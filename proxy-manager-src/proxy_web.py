@@ -699,6 +699,130 @@ if __name__ == '__main__':
             cursor: pointer;
             font-size: 14px;
         }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .message-modal-btn.secondary:hover {
+            background: #d0d0d0;
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -740,6 +864,21 @@ if __name__ == '__main__':
                     <tr><td colspan="5" style="text-align:center;">加载中...</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
         </div>
     </div>
 
@@ -790,6 +929,83 @@ if __name__ == '__main__':
         }
     </script>
     <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
         let currentUsers = [];
 
         async function loadUsers() {
@@ -829,11 +1045,12 @@ if __name__ == '__main__':
             const data = await res.json();
 
             if (data.success) {
-                alert('用户添加成功！\\n\\n用户名: ' + data.user.username + '\\n密码: ' + data.user.password + '\\n\\n请保存此密码！');
+                const message = `用户添加成功！\n\n用户名: ${data.user.username}\n密码: ${data.user.password}\n\n请保存此密码！`;
+                showMessage('添加成功', message, 'success', true);
                 document.getElementById('addUserForm').reset();
                 loadUsers();
             } else {
-                alert(data.message);
+                showMessage('添加失败', data.message, 'error');
             }
         });
 
@@ -842,7 +1059,7 @@ if __name__ == '__main__':
         async function showConfig(username) {
             const user = currentUsers.find(u => u.username === username);
             if (!user) {
-                alert('用户不存在');
+                showMessage('错误', '用户不存在', 'error');
                 return;
             }
 
@@ -865,12 +1082,12 @@ if __name__ == '__main__':
                 console.log('配置数据:', data);
 
                 if (data.error) {
-                    alert('错误: ' + data.error);
+                    showMessage('错误', data.error, 'error');
                     return;
                 }
 
                 if (!data.vless && !data.vmess && !data.trojan && !data.ss) {
-                    alert('配置数据为空，请联系管理员');
+                    showMessage('警告', '配置数据为空，请联系管理员', 'warning');
                     return;
                 }
 
@@ -883,7 +1100,8 @@ if __name__ == '__main__':
 
             } catch (error) {
                 console.error('获取配置失败:', error);
-                alert('获取配置失败: ' + error.message + '\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确');
+                const errorMsg = `获取配置失败: ${error.message}\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确`;
+                showMessage('获取配置失败', errorMsg, 'error');
             }
         }
 
@@ -922,7 +1140,7 @@ if __name__ == '__main__':
             // 尝试使用现代 clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
-                    alert('✅ 已复制到剪贴板');
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
                 }).catch(err => {
                     console.error('复制失败:', err);
                     fallbackCopy(text);
@@ -932,7 +1150,7 @@ if __name__ == '__main__':
                 fallbackCopy(text);
             }
         }
-        
+
         function fallbackCopy(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -942,10 +1160,10 @@ if __name__ == '__main__':
             textarea.select();
             try {
                 document.execCommand('copy');
-                alert('✅ 已复制到剪贴板');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
             } catch (err) {
                 console.error('复制失败:', err);
-                alert('❌ 复制失败，请手动复制');
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
             }
             document.body.removeChild(textarea);
         }
@@ -1092,6 +1310,123 @@ if __name__ == '__main__':
             width: 100%;
             font-size: 14px;
         }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -1126,9 +1461,101 @@ if __name__ == '__main__':
         </div>
     </div>
 
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- QRCode 库 - 国内高速CDN源 (按速度排序) -->
     <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
         // 如果主CDN加载失败，自动尝试备用源
         if (typeof QRCode === 'undefined') {
             console.log('主CDN加载失败，尝试备用源...');
@@ -1296,7 +1723,7 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
             // 尝试使用现代 clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
-                    alert('✅ 已复制到剪贴板');
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
                 }).catch(err => {
                     console.error('复制失败:', err);
                     fallbackCopy(text);
@@ -1306,7 +1733,7 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
                 fallbackCopy(text);
             }
         }
-        
+
         function fallbackCopy(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -1316,10 +1743,10 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
             textarea.select();
             try {
                 document.execCommand('copy');
-                alert('✅ 已复制到剪贴板');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
             } catch (err) {
                 console.error('复制失败:', err);
-                alert('❌ 复制失败，请手动复制');
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
             }
             document.body.removeChild(textarea);
         }
