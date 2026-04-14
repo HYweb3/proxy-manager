@@ -17,7 +17,7 @@ def install_missing_modules(modules):
     # 尝试使用 pip3 安装
     try:
         cmd = [sys.executable, '-m', 'pip', 'install', '-q'] + modules
-        result = subprocess.run(cmd, capture_output=True, timeout=300)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
         if result.returncode == 0:
             print("✅ 模块安装成功", file=sys.stderr)
             return True
@@ -48,7 +48,7 @@ def install_missing_modules(modules):
 
             if packages:
                 cmd = ['apt-get', 'install', '-y'] + packages
-                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
                 if result.returncode == 0:
                     print("✅ 系统包安装成功", file=sys.stderr)
                     return True
@@ -69,7 +69,7 @@ def install_missing_modules(modules):
 
             if packages:
                 cmd = ['yum', 'install', '-y'] + packages
-                result = subprocess.run(cmd, capture_output=True, timeout=300)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=300)
                 if result.returncode == 0:
                     print("✅ 系统包安装成功", file=sys.stderr)
                     return True
@@ -170,23 +170,127 @@ import io
 import base64
 
 # 添加配置管理器路径
-sys.path.insert(0, '/etc/proxy-manager')
-try:
-    from proxy_manager import ProxyManager
-except ImportError:
-    print("错误: 找不到 proxy_manager 模块", file=sys.stderr)
-    print("请确保 /etc/proxy-manager/proxy_manager.py 文件存在", file=sys.stderr)
-    sys.exit(1)
+CONFIG_PATH = os.path.expanduser('~/.proxy-manager')
+if os.path.exists('/etc/proxy-manager'):
+    CONFIG_PATH = '/etc/proxy-manager'
+sys.path.insert(0, CONFIG_PATH)
+from proxy_manager import ProxyManager
 
-app = Flask(__name__)
+# 设置模板目录
+template_dir = os.path.expanduser('~/.proxy-manager/templates')
+os.makedirs(template_dir, exist_ok=True)
+
+# 确保模板文件存在
+def ensure_templates_exist():
+    """检查并创建必需的模板文件"""
+    template_files = ['login.html', 'index.html', 'user_config.html']
+    missing_templates = [f for f in template_files if not os.path.exists(os.path.join(template_dir, f))]
+
+    if missing_templates:
+        # 如果模板缺失，暂时返回False，稍后在__main__中创建
+        return False
+    return True
+
+# 先尝试创建模板（如果__main__部分没有运行的话）
+if not os.path.exists(os.path.join(template_dir, 'login.html')):
+    # 创建基础的login.html模板
+    basic_login_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理 - 登录</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; color: #666; }
+        input[type="password"] { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        .error { color: #dc3545; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>代理管理面板</h1>
+        <form method="post">
+            <div class="form-group">
+                <label>管理员密码:</label>
+                <input type="password" name="password" required autofocus>
+            </div>
+            <button type="submit">登录</button>
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
+        </form>
+    </div>
+</body>
+</html>'''
+
+    # 创建基础的index.html模板
+    basic_index_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代理管理面板</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        h1 { color: #333; }
+        .info { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>代理管理面板</h1>
+        <div class="info">
+            <p><strong>服务器:</strong> {{ domain }}</p>
+            <p><strong>状态:</strong> 运行中</p>
+        </div>
+        <p>用户管理功能正在开发中...</p>
+    </div>
+</body>
+</html>'''
+
+    # 创建基础的user_config.html模板
+    basic_user_config_html = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户配置 - 代理管理</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>用户配置: {{ username }}</h1>
+        <p><strong>服务器:</strong> {{ domain }}</p>
+        <p>配置信息正在加载中...</p>
+    </div>
+</body>
+</html>'''
+
+    # 保存基础模板
+    with open(os.path.join(template_dir, 'login.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_login_html)
+    with open(os.path.join(template_dir, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_index_html)
+    with open(os.path.join(template_dir, 'user_config.html'), 'w', encoding='utf-8') as f:
+        f.write(basic_user_config_html)
+
+app = Flask(__name__, template_folder=template_dir)
 app.secret_key = os.urandom(24)
 QRcode(app)
 
-try:
-    manager = ProxyManager()
-except Exception as e:
-    print(f"错误: 无法初始化 ProxyManager: {e}", file=sys.stderr)
-    sys.exit(1)
+manager = ProxyManager()
 
 
 @app.route('/')
@@ -398,11 +502,10 @@ def clash_config(username):
 
 
 if __name__ == '__main__':
-    # 创建模板目录
-    template_dir = '/var/www/proxy-manager/templates'
-    os.makedirs(template_dir, exist_ok=True)
+    # 模板目录已在模块导入时创建，这里直接使用
+    # template_dir 已在文件开头定义
 
-    # 创建HTML模板
+    # 创建完整的HTML模板（功能更丰富）
     login_html = '''<!DOCTYPE html>
 <html>
 <head>
@@ -705,6 +808,130 @@ if __name__ == '__main__':
             cursor: pointer;
             font-size: 14px;
         }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .message-modal-btn.secondary:hover {
+            background: #d0d0d0;
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -746,6 +973,21 @@ if __name__ == '__main__':
                     <tr><td colspan="5" style="text-align:center;">加载中...</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
         </div>
     </div>
 
@@ -796,6 +1038,83 @@ if __name__ == '__main__':
         }
     </script>
     <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
         let currentUsers = [];
 
         async function loadUsers() {
@@ -835,11 +1154,12 @@ if __name__ == '__main__':
             const data = await res.json();
 
             if (data.success) {
-                alert('用户添加成功！\\n\\n用户名: ' + data.user.username + '\\n密码: ' + data.user.password + '\\n\\n请保存此密码！');
+                const message = `用户添加成功！\n\n用户名: ${data.user.username}\n密码: ${data.user.password}\n\n请保存此密码！`;
+                showMessage('添加成功', message, 'success', true);
                 document.getElementById('addUserForm').reset();
                 loadUsers();
             } else {
-                alert(data.message);
+                showMessage('添加失败', data.message, 'error');
             }
         });
 
@@ -848,7 +1168,7 @@ if __name__ == '__main__':
         async function showConfig(username) {
             const user = currentUsers.find(u => u.username === username);
             if (!user) {
-                alert('用户不存在');
+                showMessage('错误', '用户不存在', 'error');
                 return;
             }
 
@@ -871,12 +1191,12 @@ if __name__ == '__main__':
                 console.log('配置数据:', data);
 
                 if (data.error) {
-                    alert('错误: ' + data.error);
+                    showMessage('错误', data.error, 'error');
                     return;
                 }
 
                 if (!data.vless && !data.vmess && !data.trojan && !data.ss) {
-                    alert('配置数据为空，请联系管理员');
+                    showMessage('警告', '配置数据为空，请联系管理员', 'warning');
                     return;
                 }
 
@@ -889,7 +1209,8 @@ if __name__ == '__main__':
 
             } catch (error) {
                 console.error('获取配置失败:', error);
-                alert('获取配置失败: ' + error.message + '\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确');
+                const errorMsg = `获取配置失败: ${error.message}\n\n请检查:\n1. 网络连接\n2. 服务器状态\n3. 用户密码是否正确`;
+                showMessage('获取配置失败', errorMsg, 'error');
             }
         }
 
@@ -909,10 +1230,27 @@ if __name__ == '__main__':
 
             // 生成二维码
             if (tab !== 'clash') {
-                QRCode.toCanvas(document.createElement('canvas'), urls[tab], { width: 200 }, (error, canvas) => {
-                    document.getElementById('qrcode').innerHTML = '';
-                    if (!error) document.getElementById('qrcode').appendChild(canvas);
-                });
+                const qrcodeContainer = document.getElementById('qrcode');
+                qrcodeContainer.innerHTML = ''; // 清空容器
+
+                // 创建新的容器元素
+                const qrElement = document.createElement('div');
+                qrcodeContainer.appendChild(qrElement);
+
+                // 使用qrcodejs库的正确API
+                try {
+                    new QRCode(qrElement, {
+                        text: urls[tab],
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                } catch (error) {
+                    console.error('二维码生成失败:', error);
+                    qrcodeContainer.innerHTML = '<p style="color: #f56565;">二维码生成失败，请使用复制链接功能</p>';
+                }
             } else {
                 document.getElementById('qrcode').innerHTML = '<a href="/config/' + currentConfig.username + '.yaml" class="btn btn-primary">下载Clash配置</a>';
             }
@@ -928,7 +1266,7 @@ if __name__ == '__main__':
             // 尝试使用现代 clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
-                    alert('✅ 已复制到剪贴板');
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
                 }).catch(err => {
                     console.error('复制失败:', err);
                     fallbackCopy(text);
@@ -938,7 +1276,7 @@ if __name__ == '__main__':
                 fallbackCopy(text);
             }
         }
-        
+
         function fallbackCopy(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -948,10 +1286,10 @@ if __name__ == '__main__':
             textarea.select();
             try {
                 document.execCommand('copy');
-                alert('✅ 已复制到剪贴板');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
             } catch (err) {
                 console.error('复制失败:', err);
-                alert('❌ 复制失败，请手动复制');
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
             }
             document.body.removeChild(textarea);
         }
@@ -1098,6 +1436,123 @@ if __name__ == '__main__':
             width: 100%;
             font-size: 14px;
         }
+
+        /* 消息模态框样式 */
+        .message-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .message-modal.active {
+            display: flex;
+        }
+        .message-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        .message-modal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .message-modal-icon {
+            font-size: 32px;
+            margin-right: 15px;
+        }
+        .message-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+        .message-modal-body {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        .message-modal-body.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message-modal-body.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message-modal-body.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .message-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .message-modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .message-modal-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+        .message-modal-btn.primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .message-modal-copy-btn {
+            background: #28a745;
+            color: white;
+            font-size: 14px;
+            padding: 8px 16px;
+        }
+        .message-modal-copy-btn:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -1132,9 +1587,101 @@ if __name__ == '__main__':
         </div>
     </div>
 
+    <!-- 消息模态框 -->
+    <div class="message-modal" id="messageModal">
+        <div class="message-modal-content">
+            <div class="message-modal-header">
+                <span class="message-modal-icon" id="messageIcon">ℹ️</span>
+                <h3 class="message-modal-title" id="messageTitle">提示</h3>
+            </div>
+            <div class="message-modal-body" id="messageBody"></div>
+            <div class="message-modal-footer">
+                <button class="message-modal-btn message-modal-copy-btn" id="messageCopyBtn" onclick="copyMessage()" style="display: none;">📋 复制内容</button>
+                <button class="message-modal-btn primary" onclick="closeMessageModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <!-- QRCode 库 - 国内高速CDN源 (按速度排序) -->
     <script src="https://lib.baomitu.com/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
+        // 消息模态框函数
+        function showMessage(title, message, type = 'info', showCopy = false) {
+            const modal = document.getElementById('messageModal');
+            const icon = document.getElementById('messageIcon');
+            const titleEl = document.getElementById('messageTitle');
+            const body = document.getElementById('messageBody');
+            const copyBtn = document.getElementById('messageCopyBtn');
+
+            // 设置图标
+            const icons = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            };
+            icon.textContent = icons[type] || 'ℹ️';
+
+            // 设置标题和内容
+            titleEl.textContent = title;
+            body.textContent = message;
+
+            // 设置样式类
+            body.className = 'message-modal-body ' + type;
+
+            // 显示/隐藏复制按钮
+            copyBtn.style.display = showCopy ? 'block' : 'none';
+
+            // 显示模态框
+            modal.classList.add('active');
+        }
+
+        function closeMessageModal() {
+            const modal = document.getElementById('messageModal');
+            modal.classList.remove('active');
+        }
+
+        function copyMessage() {
+            const body = document.getElementById('messageBody');
+            const text = body.textContent;
+
+            // 尝试使用现代 clipboard API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showMessage('复制成功', '内容已复制到剪贴板', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showMessage('复制成功', '内容已复制到剪贴板', 'success');
+            } catch (err) {
+                console.error('复制失败:', err);
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 键盘事件：ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeMessageModal();
+            }
+        });
+
         // 如果主CDN加载失败，自动尝试备用源
         if (typeof QRCode === 'undefined') {
             console.log('主CDN加载失败，尝试备用源...');
@@ -1302,7 +1849,7 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
             // 尝试使用现代 clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
-                    alert('✅ 已复制到剪贴板');
+                    showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
                 }).catch(err => {
                     console.error('复制失败:', err);
                     fallbackCopy(text);
@@ -1312,7 +1859,7 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
                 fallbackCopy(text);
             }
         }
-        
+
         function fallbackCopy(text) {
             const textarea = document.createElement('textarea');
             textarea.value = text;
@@ -1322,10 +1869,10 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
             textarea.select();
             try {
                 document.execCommand('copy');
-                alert('✅ 已复制到剪贴板');
+                showMessage('复制成功', '配置链接已复制到剪贴板', 'success');
             } catch (err) {
                 console.error('复制失败:', err);
-                alert('❌ 复制失败，请手动复制');
+                showMessage('复制失败', '无法自动复制，请手动选择内容复制', 'error');
             }
             document.body.removeChild(textarea);
         }
@@ -1363,8 +1910,9 @@ qrcodeDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><p style=
     # 从配置文件读取Web端口
     web_port = 5080  # 默认端口
     try:
-        if os.path.exists('/etc/proxy-manager/install_info.txt'):
-            with open('/etc/proxy-manager/install_info.txt', 'r') as f:
+        config_file = os.path.join(CONFIG_PATH, 'install_info.txt')
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
                 for line in f:
                     if 'Web:' in line:
                         web_port = int(line.split(':')[1].strip())

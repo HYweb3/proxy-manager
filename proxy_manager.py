@@ -10,10 +10,7 @@ import json
 import os
 import hashlib
 from datetime import datetime
-try:
-    import yaml
-except ImportError:
-    yaml = None
+import yaml
 from pathlib import Path
 
 CONFIG_FILE = "/etc/proxy-manager/config.json"
@@ -140,11 +137,11 @@ class ProxyManager:
 
     def update_xray_config(self):
         """更新Xray配置文件 - 支持多协议"""
-        # 端口配置 - 与quick_install.sh保持一致
-        PROXY_PORT = 500     # VLESS
-        TROJAN_PORT = 501    # Trojan
-        VMESS_PORT = 502     # VMess
-        SS_PORT = 503        # Shadowsocks
+        # 端口配置 - 使用标准HTTPS端口
+        VLESS_PORT = 443     # VLESS (TLS加密)
+        TROJAN_PORT = 501    # Trojan (TLS加密)
+        VMESS_PORT = 502     # VMess (TLS加密)
+        SS_PORT = 503        # Shadowsocks (无加密)
 
         # 获取启用的用户
         enabled_users = [u for u in self.users if u['enabled']]
@@ -192,9 +189,9 @@ class ProxyManager:
                 "loglevel": "warning"
             },
             "inbounds": [
-                # VLESS on 500
+                # VLESS on 443 (标准HTTPS端口)
                 {
-                    "port": PROXY_PORT,
+                    "port": VLESS_PORT,
                     "protocol": "vless",
                     "settings": {
                         "clients": vless_clients,
@@ -278,8 +275,8 @@ class ProxyManager:
         os.system("systemctl reload xray 2>/dev/null")
 
     def generate_vless_url(self, user):
-        """生成VLESS URL - 端口 500"""
-        vless_port = 500  # PROXY_PORT
+        """生成VLESS URL - 端口 443 (标准HTTPS端口)"""
+        vless_port = 443  # VLESS_PORT
         return f"vless://{user['uuid']}@{self.domain}:{vless_port}?encryption=none&security=tls&type=tcp#ProxyManager_{user['username']}"
 
     def generate_vmess_url(self, user):
@@ -322,7 +319,7 @@ class ProxyManager:
                     "name": f"ProxyManager_{user['username']}",
                     "type": "vless",
                     "server": self.domain,
-                    "port": 500,  # PROXY_PORT - VLESS端口
+                    "port": 443,  # VLESS_PORT - 标准HTTPS端口
                     "uuid": user['uuid'],
                     "udp": True,
                     "tls": True,
@@ -340,11 +337,7 @@ class ProxyManager:
                 "MATCH,Proxy"
             ]
         }
-        # 优先使用 yaml 格式，如果不可用则使用 json
-        if yaml is not None and hasattr(yaml, 'dump'):
-            return yaml.dump(config)
-        else:
-            return json.dumps(config, indent=2)
+        return yaml.dump(config) if hasattr(yaml, 'dump') else json.dumps(config, indent=2)
 
     def generate_shadowrocket_config(self, user):
         """生成ShadowRocket配置 - Shadowrocket支持VLESS链接"""
@@ -372,6 +365,9 @@ class ProxyManager:
 
 def main():
     import sys
+    import io
+    # 设置UTF-8编码以支持中文输出
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
     manager = ProxyManager()
     command = sys.argv[1] if len(sys.argv) > 1 else ''
